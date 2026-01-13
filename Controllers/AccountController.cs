@@ -16,7 +16,7 @@ public class AccountController : Controller
         _userRepository = userRepository;
     }
 
-    [HttpPost("login")]
+    [HttpPost("login/process")]
     public async Task<IActionResult> Login([FromForm] string userName, [FromForm] string password, [FromForm] string returnUrl)
     {
         // Default return URL if not provided
@@ -48,7 +48,7 @@ public class AccountController : Controller
             claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
             claims.Add(new Claim("IsAdministrator", "true"));
         }
-        
+
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var authProperties = new AuthenticationProperties
         {

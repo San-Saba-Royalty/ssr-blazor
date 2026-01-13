@@ -26,8 +26,24 @@
                        title="Toggle Dark Mode" />
         <AuthorizeView>
             <Authorized Context="authState">
-                <MudText Class="mr-4">Hello, @authState.User.Identity?.Name</MudText>
-                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Href="/account/logout">Logout</MudButton>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <ActivatorContent>
+                        <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="mr-2">
+                            @GetUserInitials(authState.User.Identity?.Name)
+                        </MudAvatar>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem>
+                            <MudText Typo="Typo.body2" Class="px-2">
+                                <strong>@authState.User.Identity?.Name</strong>
+                            </MudText>
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Href="/account/logout" Icon="@Icons.Material.Filled.Logout">
+                            Logout
+                        </MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
             </Authorized>
             <NotAuthorized>
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/account/login">Login</MudButton>
@@ -54,5 +70,21 @@
     public void Dispose()
     {
         ThemeService.OnChange -= StateHasChanged;
+    }
+
+    private string GetUserInitials(string? userName)
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+            return "?";
+
+        var parts = userName.Split(' ', '@', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "?";
+
+        if (parts.Length == 1)
+            return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+
+        // Take first letter of first two parts (first name, last name)
+        return $"{parts[0][0]}{parts[1][0]}".ToUpper();
     }
 }
