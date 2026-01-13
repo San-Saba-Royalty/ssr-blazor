@@ -1,0 +1,120 @@
+@page "/account/user-edit/{UserId}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Web
+@using SSRBlazor.Components
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject UserRepository UserRepository
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Edit User</MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (User != null)
+    {
+        <EditForm Model="@User" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudCard Elevation="4">
+                        <MudCardContent>
+                            <MudGrid>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="User ID" @bind-Value="User.UserId" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="true" />
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="Email" @bind-Value="User.Email" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="First Name" @bind-Value="User.FirstName" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="Last Name" @bind-Value="User.LastName" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="12" md="4">
+                                    <MudCheckBox T="bool" @bind-Value="User.IsActive" Label="Login is Active" Color="Color.Success" />
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                     <MudText Typo="Typo.subtitle1" Class="mt-4">Change Password (Optional)</MudText>
+                                     <MudTextField Label="New Password" @bind-Value="_newPassword" 
+                                                  InputType="InputType.Password" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                        <MudCardActions Class="pb-4 pl-4">
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Save Changes</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">User not found.</MudAlert>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    private User? User { get; set; }
+    private string _newPassword = string.Empty;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        User = await UserRepository.LoadUserByUserIdAsync(UserId);
+        _loading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (User != null)
+        {
+            try 
+            {
+                User.ModifiedDate = DateTime.UtcNow;
+                UserRepository.Update(User);
+                 
+                if (!string.IsNullOrWhiteSpace(_newPassword))
+                {
+                    await UserRepository.UpdatePasswordAsync(User.UserId, _newPassword);
+                }
+                else 
+                {
+                     // Just save the user updates if no password change
+                     await UserRepository.SaveChangesAsync();
+                }
+
+                Snackbar.Add("User updated successfully!", Severity.Success);
+                Navigation.NavigateTo("/account/users");
+            }
+            catch(Exception ex)
+            {
+                Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/account/users");
+}

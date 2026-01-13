@@ -1,0 +1,96 @@
+@page "/account/user-add"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.JSInterop
+@using SSRBlazor
+@using SSRBlazor.Components
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Add New User</MudText>
+
+    <EditForm Model="@User" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        
+        <MudGrid>
+            <MudItem xs="12">
+                <MudCard Elevation="4">
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Email" @bind-Value="User.Email" 
+                                              For="@(() => User.Email)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Password" @bind-Value="User.Password" 
+                                              For="@(() => User.Password)" InputType="InputType.Password" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="First Name" @bind-Value="User.FirstName" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Last Name" @bind-Value="User.LastName" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudCheckBox T="bool" @bind-Value="User.IsActive" Label="Login is Active" Color="Color.Success" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pb-4 pl-4">
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Create User</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+</MudContainer>
+
+@code {
+    [Inject] UserRepository UserRepository { get; set; }
+
+    private User User { get; set; } = new() { IsActive = true };
+    private string Password { get; set; } = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // We need a UserId. If the form doesn't provide it, we might need one.
+            // But UserAdd.razor UI doesn't have UserId field in the original file I read!
+            // It has Email, Password, FirstName, LastName.
+            // I'll assume Email should be the UserId if not specified, or I should add a UserId field.
+            // For now, I'll use Email as UserId since it's a key requirement usually.
+            if(string.IsNullOrEmpty(User.UserId))
+            {
+                User.UserId = User.Email; 
+            }
+            
+            await UserRepository.CreateUserAsync(User, User.Password); // User.Password was bound in the UI?
+            // Wait, UI bound to User.Password: <MudTextField ... @bind-Value="User.Password" ... />
+            // CreateUserAsync hashes it. 
+            // NOTE: CreateUserAsync(user, plainText) sets user.Password to hash.
+            // So passing User.Password (plaintext bound) is correct.
+            
+            Snackbar.Add("User created successfully!", Severity.Success);
+            Navigation.NavigateTo("/account/users");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating user: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/account/users");
+}

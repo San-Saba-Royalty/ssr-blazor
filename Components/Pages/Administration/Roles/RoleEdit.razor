@@ -1,0 +1,141 @@
+@using MudBlazor
+@page "/system/role/{RoleId:int}"
+@page "/system/role/add"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject RoleRepository RoleRepository
+@inject PermissionRepository PermissionRepository
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">@(RoleId == 0 ? "Add Role" : "Edit Role")</MudText>
+
+<MudForm Model="@_role" @ref="_form">
+    <MudPaper Class="pa-4 mb-4">
+        <MudTextField @bind-Value="_role.RoleName" 
+                      Label="Role Name" 
+                      Required="true" 
+                      RequiredError="Role Name is required." 
+                      MaxLength="50" />
+    </MudPaper>
+
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-2">Permissions</MudText>
+        <MudTable Items="@_permissionModels" Dense="true" Hover="true" FixedHeader="true" Height="400px">
+            <HeaderContent>
+                <MudTh>Select</MudTh>
+                <MudTh>Code</MudTh>
+                <MudTh>Description</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Select">
+                    <MudCheckBox @bind-Value="@context.IsSelected" Color="Color.Primary" Dense="true" />
+                </MudTd>
+                <MudTd DataLabel="Code">@context.Code</MudTd>
+                <MudTd DataLabel="Description">@context.Description</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <div class="d-flex justify-end mt-4">
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="mr-2">Cancel</MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary">Save</MudButton>
+    </div>
+</MudForm>
+
+@code {
+    [Parameter] public int RoleId { get; set; }
+
+    private Role _role = new();
+    private List<PermissionModel> _permissionModels = new();
+    private MudForm _form = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load all permissions
+        var allPermissions = await PermissionRepository.GetAllAsync();
+        
+        if (RoleId != 0)
+        {
+            // Edit Mode
+            var existingRole = await RoleRepository.GetByIdAsync(RoleId);
+            if (existingRole != null)
+            {
+                _role = existingRole;
+                var rolePermCodes = existingRole.RolePermissions.Select(rp => rp.PermissionCode).ToHashSet();
+                
+                _permissionModels = allPermissions.Select(p => new PermissionModel 
+                { 
+                    Code = p.PermissionCode, 
+                    Description = p.PermissionDesc, 
+                    IsSelected = rolePermCodes.Contains(p.PermissionCode) 
+                }).OrderBy(p => p.Description).ToList();
+            }
+            else
+            {
+                Snackbar.Add($"Role {RoleId} not found", Severity.Error);
+                Navigation.NavigateTo("/system/roles");
+            }
+        }
+        else
+        {
+            // Add Mode
+            _permissionModels = allPermissions.Select(p => new PermissionModel 
+            { 
+                Code = p.PermissionCode, 
+                Description = p.PermissionDesc, 
+                IsSelected = false 
+            }).OrderBy(p => p.Description).ToList();
+        }
+    }
+
+    private async Task Save()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            if (RoleId == 0)
+            {
+                // Add
+                await RoleRepository.AddAsync(_role);
+                // Need to save first to get ID? YES.
+                await RoleRepository.SaveChangesAsync();
+                
+                // Now update permissions
+                var selectedCodes = _permissionModels.Where(pm => pm.IsSelected).Select(pm => pm.Code).ToList();
+                await RoleRepository.UpdatePermissionsAsync(_role.RoleId, selectedCodes);
+                
+                Snackbar.Add("Role added successfully", Severity.Success);
+            }
+            else
+            {
+                // Update
+                RoleRepository.Update(_role);
+                await RoleRepository.SaveChangesAsync();
+                
+                var selectedCodes = _permissionModels.Where(pm => pm.IsSelected).Select(pm => pm.Code).ToList();
+                await RoleRepository.UpdatePermissionsAsync(_role.RoleId, selectedCodes);
+                
+                Snackbar.Add("Role updated successfully", Severity.Success);
+            }
+            
+            Navigation.NavigateTo("/system/roles");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving role: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/system/roles");
+
+    public class PermissionModel
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsSelected { get; set; }
+    }
+}

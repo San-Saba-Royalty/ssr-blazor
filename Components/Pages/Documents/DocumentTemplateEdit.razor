@@ -1,0 +1,346 @@
+@page "/documents/template/edit/{DocumentTemplateId:int}"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize]
+@inject DocumentService DocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Document Template</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Edit Document Template</MudText>
+
+    @if (_documentTemplate != null)
+    {
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Template Details">
+                <EditForm Model="@_documentTemplate" OnValidSubmit="SaveTemplate">
+                    <DataAnnotationsValidator />
+                    
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField Label="Document Type" 
+                                          Value="@_documentTemplate.DocumentTypeCode" 
+                                          ReadOnly="true" 
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField Label="Template Description" 
+                                          @bind-Value="_documentTemplate.DocumentTemplateDesc"
+                                          Required="true"
+                                          RequiredError="Template description is required"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2">Current Document:</MudText>
+                            @if (!string.IsNullOrEmpty(_documentTemplate.DSFileID))
+                            {
+                                <MudLink Href="@GetDocumentUrl(_documentTemplate)" Target="_blank">
+                                    <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Description">
+                                        @_documentTemplate.DocumentTemplateLocation
+                                    </MudChip>
+                                </MudLink>
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".doc,.docx,.pdf">
+                                <ButtonTemplate>
+                                    <MudButton HtmlTag="label"
+                                               Variant="Variant.Outlined"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                                               for="@context">
+                                        Upload New Document
+                                    </MudButton>
+                                </ButtonTemplate>
+                            </MudFileUpload>
+                            @if (_selectedFile != null)
+                            {
+                                <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.AttachFile" Class="mt-2">
+                                    New: @_selectedFile.Name
+                                </MudChip>
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12" Class="d-flex justify-space-between">
+                            <AuthorizeView Roles="Administrator" Context="authContext">
+                                <Authorized>
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Error"
+                                               StartIcon="@Icons.Material.Filled.Delete"
+                                               OnClick="DeleteTemplate">
+                                        Delete Template
+                                    </MudButton>
+                                </Authorized>
+                                <NotAuthorized>
+                                    <MudSpacer />
+                                </NotAuthorized>
+                            </AuthorizeView>
+                            <MudStack Row="true" Spacing="2">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Default" 
+                                           OnClick="Cancel">
+                                    Cancel
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           ButtonType="ButtonType.Submit">
+                                    Save Changes
+                                </MudButton>
+                            </MudStack>
+                        </MudItem>
+                    </MudGrid>
+                </EditForm>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Custom Fields">
+                <MudDataGrid T="DocTemplateCustomField" Items="@_customFields" Editable="true" 
+                             EditMode="DataGridEditMode.Form" CommittedItemChanges="@OnCustomFieldUpdated">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Custom Merge Fields</MudText>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Add" OnClick="AddCustomField">
+                            Add Custom Field
+                        </MudButton>
+                    </ToolBarContent>
+                    <Columns>
+                        <PropertyColumn Property="x => x.CustomPhrase" Title="Custom Phrase" />
+                        <PropertyColumn Property="x => x.CustomTag" Title="Custom Tag" />
+                        <TemplateColumn CellClass="d-flex justify-end">
+                            <CellTemplate>
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" 
+                                               OnClick="@(() => EditCustomField(context.Item))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" 
+                                               Color="Color.Error" OnClick="@(() => DeleteCustomField(context.Item))" />
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                </MudDataGrid>
+
+                <MudPaper Class="pa-4 mt-4">
+                    <MudText Typo="Typo.subtitle2" GutterBottom="true">Instructions:</MudText>
+                    <MudText Typo="Typo.body2">
+                        • Custom Phrase: The descriptive text that will appear in the document<br/>
+                        • Custom Tag: The merge field tag (without angle brackets) that will be replaced during document generation<br/>
+                        • Example: Custom Phrase = "Buyer Name", Custom Tag = "BUYER_NAME"
+                    </MudText>
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+    }
+    else
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int DocumentTemplateId { get; set; }
+
+    private DocumentTemplate? _documentTemplate;
+    private List<DocTemplateCustomField> _customFields = new();
+    private IBrowserFile? _selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        try
+        {
+            _documentTemplate = await DocumentService.GetByIdAsync(DocumentTemplateId);
+            
+            if (_documentTemplate == null)
+            {
+                Snackbar.Add("Document template not found", Severity.Error);
+                NavigationManager.NavigateTo("/documents/templates");
+                return;
+            }
+
+            _customFields = _documentTemplate.CustomFields?.ToList() ?? new List<DocTemplateCustomField>();
+            _originalDescription = _documentTemplate.DocumentTemplateDesc;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading template: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string? _originalDescription;
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+    }
+
+    private async Task SaveTemplate()
+    {
+        if (_documentTemplate == null) return;
+
+        try
+        {
+            // Validate description if changed
+            if (_documentTemplate.DocumentTemplateDesc != _originalDescription)
+            {
+                var descriptionExists = await DocumentService.DoesTemplateDescriptionExistAsync(
+                    _documentTemplate.DocumentTypeCode, 
+                    _documentTemplate.DocumentTemplateDesc,
+                    DocumentTemplateId);
+                
+                if (descriptionExists)
+                {
+                    Snackbar.Add("This template description already exists for this document type", Severity.Error);
+                    return;
+                }
+            }
+
+            // Validate new file if selected
+            if (_selectedFile != null)
+            {
+                var fileExists = await DocumentService.DoesTemplateFileExistAsync(
+                    _documentTemplate.DocumentTypeCode, 
+                    _selectedFile.Name,
+                    DocumentTemplateId);
+                
+                if (fileExists)
+                {
+                    Snackbar.Add("A template with this file name already exists for this document type", Severity.Error);
+                    return;
+                }
+
+                // Update the location
+                _documentTemplate.DocumentTemplateLocation = _selectedFile.Name;
+                // TODO: Upload file to DocuShare and update DSFileID
+                // _documentTemplate.DSFileID = await UploadFileToStorage(_selectedFile);
+            }
+
+            // Update custom fields collection
+            _documentTemplate.CustomFields = _customFields;
+
+            await DocumentService.UpdateAsync(_documentTemplate);
+            
+            _originalDescription = _documentTemplate.DocumentTemplateDesc;
+            Snackbar.Add("Document template updated successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating template: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteTemplate()
+    {
+        if (_documentTemplate == null) return;
+
+        // Check if documents exist for this template
+        var documentsExist = await DocumentService.DoDocumentsExistForTemplateAsync(DocumentTemplateId);
+        
+        string message = documentsExist 
+            ? $"Warning: Documents have been created using this template. Deleting the template will not remove existing documents, but future document generation will not be possible.\n\nAre you sure you want to delete '{_documentTemplate.DocumentTemplateDesc}'?"
+            : $"Are you sure you want to delete '{_documentTemplate.DocumentTemplateDesc}'?";
+
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Delete Template",
+            message,
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await DocumentService.DeleteAsync(DocumentTemplateId);
+                Snackbar.Add("Document template deleted successfully", Severity.Success);
+                NavigationManager.NavigateTo("/documents/templates");
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting template: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task AddCustomField()
+    {
+        var newField = new DocTemplateCustomField
+        {
+            DocumentTemplateID = DocumentTemplateId,
+            CustomPhrase = "",
+            CustomTag = ""
+        };
+
+        var parameters = new DialogParameters
+        {
+            { "CustomField", newField },
+            { "IsNew", true }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<DocTemplateCustomFieldDialog>("Add Custom Field", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is DocTemplateCustomField field)
+        {
+            _customFields.Add(field);
+            await SaveTemplate();
+        }
+    }
+
+    private async Task EditCustomField(DocTemplateCustomField field)
+    {
+        var parameters = new DialogParameters
+        {
+            { "CustomField", field },
+            { "IsNew", false }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<DocTemplateCustomFieldDialog>("Edit Custom Field", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await SaveTemplate();
+        }
+    }
+
+    private async Task DeleteCustomField(DocTemplateCustomField field)
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning",
+            $"Are you sure you want to delete the custom field '{field.CustomPhrase}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            _customFields.Remove(field);
+            await SaveTemplate();
+            Snackbar.Add("Custom field deleted", Severity.Success);
+        }
+    }
+
+    private void OnCustomFieldUpdated(DocTemplateCustomField field)
+    {
+        // Handle inline grid edits if needed
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/documents/templates");
+    }
+
+    private string GetDocumentUrl(DocumentTemplate template)
+    {
+        // TODO: Implement DocuShare URL building or alternative document storage URL
+        return $"#document/{template.DSFileID}";
+    }
+}

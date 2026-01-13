@@ -1,0 +1,93 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@County" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="County.CountyName" 
+                                Label="County Name" 
+                                Required="true" 
+                                MaxLength="50"
+                                Immediate="true"/>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="SortableState" Label="State" Required="true" 
+                               Value="@(new SortableState(County.StateCode, ""))"
+                               ValueChanged="@((SortableState s) => County.StateCode = s.Code)"
+                               ToStringFunc="@(s => s.Name)">
+                        @foreach (var state in _states)
+                        {
+                            <MudSelectItem Value="@state">@state.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="County.RecordingFeeFirstPage" 
+                                   Label="Recording Fee (1st Page)" 
+                                   Format="C2"
+                                   Min="0"/>
+                </MudItem>
+                 <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="County.RecordingFeeAdditionalPage" 
+                                   Label="Recording Fee (Addl Page)" 
+                                   Format="C2"
+                                   Min="0"/>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="County.CourtFee" 
+                                   Label="Court Fee" 
+                                   Format="C2"
+                                   Min="0"/>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public County County { get; set; } = new();
+
+    private MudForm _form = default!;
+    private List<SortableState> _states = new();
+    
+    // Helper record for sortable dropdown
+    public record SortableState(string Code, string Name);
+
+    protected override void OnInitialized()
+    {
+        // Populate generic US states list
+        _states = new List<SortableState>
+        {
+            new("AL", "Alabama"), new("AK", "Alaska"), new("AZ", "Arizona"), new("AR", "Arkansas"), new("CA", "California"),
+            new("CO", "Colorado"), new("CT", "Connecticut"), new("DE", "Delaware"), new("FL", "Florida"), new("GA", "Georgia"),
+            new("HI", "Hawaii"), new("ID", "Idaho"), new("IL", "Illinois"), new("IN", "Indiana"), new("IA", "Iowa"),
+            new("KS", "Kansas"), new("KY", "Kentucky"), new("LA", "Louisiana"), new("ME", "Maine"), new("MD", "Maryland"),
+            new("MA", "Massachusetts"), new("MI", "Michigan"), new("MN", "Minnesota"), new("MS", "Mississippi"), new("MO", "Missouri"),
+            new("MT", "Montana"), new("NE", "Nebraska"), new("NV", "Nevada"), new("NH", "New Hampshire"), new("NJ", "New Jersey"),
+            new("NM", "New Mexico"), new("NY", "New York"), new("NC", "North Carolina"), new("ND", "North Dakota"), new("OH", "Ohio"),
+            new("OK", "Oklahoma"), new("OR", "Oregon"), new("PA", "Pennsylvania"), new("RI", "Rhode Island"), new("SC", "South Carolina"),
+            new("SD", "South Dakota"), new("TN", "Tennessee"), new("TX", "Texas"), new("UT", "Utah"), new("VT", "Vermont"),
+            new("VA", "Virginia"), new("WA", "Washington"), new("WV", "West Virginia"), new("WI", "Wisconsin"), new("WY", "Wyoming")
+        };
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(County));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

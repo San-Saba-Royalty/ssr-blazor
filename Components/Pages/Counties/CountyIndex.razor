@@ -1,0 +1,141 @@
+@page "/counties"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Components.Pages.Counties
+@inject IDialogService DialogService
+
+<PageTitle>Counties</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Counties</MudText>
+
+    <MudDataGrid T="County" Items="@_counties" Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@_quickFilter">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">County List</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddCounty" Class="ml-4">Add County</MudButton>
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.CountyName" Title="Name" Sortable="true" Filterable="true" />
+            <PropertyColumn Property="x => x.StateCode" Title="State" Sortable="true" Filterable="true" />
+            <PropertyColumn Property="x => x.ContactName" Title="Contact" />
+            <PropertyColumn Property="x => x.ContactPhone" Title="Phone" />
+            <PropertyColumn Property="x => x.City" Title="City" />
+            <PropertyColumn Property="x => x.RecordingFeeFirstPage" Title="Rec Fee (1st)" Format="C2" />
+            <TemplateColumn CellClass="d-flex justify-end">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditCounty(context.Item))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteCounty(context.Item))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="County" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<County> _counties = new();
+    private string _searchString;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _counties = await CountyService.GetAllAsync();
+    }
+
+    private Func<County, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.CountyName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        if (!string.IsNullOrWhiteSpace(x.ContactName) && x.ContactName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(x.StateCode) && x.StateCode.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+
+    private async Task AddCounty()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<CountyDialog>("Add County", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newCounty = (County)result.Data;
+            try
+            {
+                var createResult = await CountyService.CreateAsync(newCounty);
+                if (createResult.Success)
+                {
+                    Snackbar.Add("County added", Severity.Success);
+                    await LoadData();
+                }
+                else
+                {
+                    Snackbar.Add(createResult.Error, Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error adding county: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void EditCounty(County county)
+    {
+        Navigation.NavigateTo($"/county/edit/{county.CountyID}");
+    }
+
+    private async Task DeleteCounty(County county)
+    {
+        // Check for dependencies
+        if (await CountyService.HasAssociatedAcquisitionsAsync(county.CountyID))
+        {
+             await DialogService.ShowMessageBox("Cannot Delete", "This county has associated acquisitions and cannot be deleted.");
+             return;
+        }
+
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning", 
+            $"Are you sure you want to delete '{county.CountyName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                var deleteResult = await CountyService.DeleteAsync(county.CountyID);
+                if (deleteResult.Success)
+                {
+                     Snackbar.Add("County deleted", Severity.Success);
+                     await LoadData();
+                }
+                else
+                {
+                    Snackbar.Add(deleteResult.Error, Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting county: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

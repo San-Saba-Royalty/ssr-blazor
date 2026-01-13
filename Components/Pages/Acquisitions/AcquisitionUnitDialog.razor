@@ -1,0 +1,198 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="General">
+                <MudForm Model="@AcqUnit" @ref="_form">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="AcqUnit.UnitName" Label="Unit Name" MaxLength="200" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudSelect T="string" Label="Unit Type" @bind-Value="AcqUnit.UnitTypeCode">
+                                <MudSelectItem Value="@((string?)null)">-- Select --</MudSelectItem>
+                                @foreach (var t in UnitTypes)
+                                {
+                                    <MudSelectItem Value="@t.UnitTypeCode">@t.UnitTypeDesc</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="AcqUnit.SsrInPay" Label="SSR In Pay" Required="true" MaxLength="20" />
+                        </MudItem>
+                        
+                        <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.UnitInterest" Label="Unit Interest" Format="N8" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.GrossAcres" Label="Gross Acres" Format="N4" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.NetAcres" Label="Net Acres" Format="N4" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="AcqUnit.LegalDescription" Label="Legal Description" Lines="3" />
+                        </MudItem>
+                        
+                        <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.TownshipNum" Label="Township Num" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudTextField @bind-Value="AcqUnit.TownshipDir" Label="Township Dir" MaxLength="1" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.SectionNum" Label="Section Num" />
+                        </MudItem>
+                         <MudItem xs="4">
+                            <MudNumericField @bind-Value="AcqUnit.RangeNum" Label="Range Num" />
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudTextField @bind-Value="AcqUnit.RangeDir" Label="Range Dir" MaxLength="1" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="AcqUnit.VolumeNumber" Label="Volume" MaxLength="20" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="AcqUnit.PageNumber" Label="Page" MaxLength="20" />
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Counties">
+                <MudGrid>
+                    <MudItem xs="8">
+                        <MudSelect T="int" Label="Select County to Add" @bind-Value="_selectedCountyToAdd">
+                             <MudSelectItem Value="0">-- Select --</MudSelectItem>
+                             @foreach(var c in Counties) {
+                                 <MudSelectItem Value="@c.CountyID">@c.CountyName</MudSelectItem>
+                             }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="4" Class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddCountyToUnit" Disabled="@(_selectedCountyToAdd == 0)">Add</MudButton>
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                         <MudTable Items="AcqUnit.AcqUnitCounties" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>County</MudTh>
+                                <MudTh>Action</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@(context.County?.CountyName ?? context.CountyID.ToString())</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveCountyFromUnit(context))" Size="Size.Small" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Wells">
+                 <MudGrid>
+                    <MudItem xs="8">
+                        <MudTextField @bind-Value="_newWellName" Label="New Well Name" />
+                    </MudItem>
+                    <MudItem xs="4" Class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddWellToUnit" Disabled="@(string.IsNullOrWhiteSpace(_newWellName))">Add</MudButton>
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                         <MudTable Items="AcqUnit.AcqUnitWells" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Well Name</MudTh>
+                                <MudTh>Action</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.WellName</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveWellFromUnit(context))" Size="Size.Small" />
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionUnit AcqUnit { get; set; } = new();
+    [Parameter] public List<UnitType> UnitTypes { get; set; } = new();
+    [Parameter] public List<County> Counties { get; set; } = new();
+
+    private MudForm _form = default!;
+    
+    private int _selectedCountyToAdd;
+    private string _newWellName = "";
+
+    private void AddCountyToUnit()
+    {
+        if (_selectedCountyToAdd == 0) return;
+        if (AcqUnit.AcqUnitCounties.Any(x => x.CountyID == _selectedCountyToAdd))
+        {
+             // Snackbar? Or just ignore
+             return; 
+        }
+
+        var newLink = new AcqUnitCounty
+        {
+            CountyID = _selectedCountyToAdd,
+            AcquisitionID = AcqUnit.AcquisitionID,
+            // AcquisitionUnitID is set when Unit is saved if new, or known if existing.
+            // But if generic object, we leave it 0, EF sets it upon graph save.
+            County = Counties.FirstOrDefault(c => c.CountyID == _selectedCountyToAdd)! 
+        };
+        
+        AcqUnit.AcqUnitCounties.Add(newLink);
+        _selectedCountyToAdd = 0; // Reset
+    }
+
+    private void RemoveCountyFromUnit(AcqUnitCounty item)
+    {
+        AcqUnit.AcqUnitCounties.Remove(item);
+    }
+    
+    private void AddWellToUnit()
+    {
+        if (string.IsNullOrWhiteSpace(_newWellName)) return;
+
+        var newWell = new AcqUnitWell
+        {
+             WellName = _newWellName,
+             AcquisitionID = AcqUnit.AcquisitionID
+        };
+        AcqUnit.AcqUnitWells.Add(newWell);
+        _newWellName = "";
+    }
+
+    private void RemoveWellFromUnit(AcqUnitWell item)
+    {
+        AcqUnit.AcqUnitWells.Remove(item);
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(AcqUnit));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

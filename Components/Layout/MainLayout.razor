@@ -1,0 +1,44 @@
+﻿@inherits LayoutComponentBase
+
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using SSRBlazor.Components.Navigation
+
+@*
+    MUDBLAZOR LAYOUT STRUCTURE:
+    1. Providers (Theme, Popover, Dialog, Snackbar) are in Routes.razor
+    2. MudLayout wraps AppBar, Drawer (optional), and MainContent
+    3. MainMenu goes inside MudAppBar for proper dropdown positioning
+*@
+
+@* === MAIN LAYOUT CONTAINER === *@
+<MudLayout>
+    
+    @* === APP BAR (contains the menu) === *@
+    <MudAppBar Elevation="1" Dense="true" Class="app-menu-bar">
+        <MainMenu />
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized Context="authState">
+                <MudText Class="mr-4">Hello, @authState.User.Identity?.Name</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Href="/account/logout">Logout</MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/account/login">Login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+    
+    @* === MAIN CONTENT (page body only) === *@
+    <MudMainContent Class="mt-16">
+        @* Page Body *@
+        <div class="page-content">
+            @Body
+        </div>
+    </MudMainContent>
+    
+</MudLayout>
+
+@code {
+    private bool _isDarkMode = false;
+}

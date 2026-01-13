@@ -1,0 +1,104 @@
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+@page "/referrer/edit"
+@page "/referrer/edit/{ReferrerId:int}"
+
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h5" Class="mb-4">@(ReferrerId == 0 ? "Add Referrer" : "Edit Referrer")</MudText>
+
+<MudForm Model="@_referrer" @ref="_form">
+    @* General Information *@
+    <MudPaper Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-2">General Information</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_referrer.ReferrerName" Label="Referrer Name" Required="true" RequiredError="Name is required" MaxLength="50" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="string" Label="Type" @bind-Value="_referrer.ReferrerTypeCode" Required="true">
+                    <MudSelectItem Value="@("IND")">Individual</MudSelectItem>
+                    <MudSelectItem Value="@("BUS")">Business</MudSelectItem>
+                    @* Add other types as needed *@
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                 <MudTextField @bind-Value="_referrer.ReferrerTaxID" Label="Tax ID" HelperText="SSN or FEIN" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Contact Information *@
+    <MudPaper Class="pa-4 mb-4">
+         <MudText Typo="Typo.h6" Class="mb-2">Contact Information</MudText>
+         <MudGrid>
+             <MudItem xs="12" sm="4">
+                 <MudTextField @bind-Value="_referrer.ContactName" Label="Contact Name" MaxLength="50" />
+             </MudItem>
+             <MudItem xs="12" sm="4">
+                 <MudTextField @bind-Value="_referrer.ContactEmail" Label="Email" InputType="InputType.Email" />
+             </MudItem>
+             <MudItem xs="12" sm="4">
+                 <MudTextField @bind-Value="_referrer.ContactPhone" Label="Phone" MaxLength="20" />
+             </MudItem>
+         </MudGrid>
+    </MudPaper>
+
+    @* Address *@
+    <MudPaper Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-2">Address</MudText>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_referrer.AddressLine1" Label="Address Line 1" MaxLength="50" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_referrer.City" Label="City" MaxLength="50" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_referrer.StateCode" Label="State" MaxLength="2" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_referrer.ZipCode" Label="Zip Code" MaxLength="10" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Forms Section - Only Valid in Edit Mode *@
+    @if (ReferrerId != 0)
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.h6">Forms</MudText>
+                <MudSpacer />
+                <MudButton StartIcon="@Icons.Material.Filled.CloudUpload" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="UploadForm">Upload Form</MudButton>
+            </MudStack>
+            
+            <MudTable Items="@_forms" Dense="true" Hover="true" FixedHeader="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Year</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>File ID</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Year">@context.FormYear</MudTd>
+                    <MudTd DataLabel="Type">@context.FormTypeCode</MudTd>
+                    <MudTd DataLabel="File ID">@context.DSFileID</MudTd>
+                    <MudTd DataLabel="Actions">
+                         @* Placeholder for view/download if implemented *@
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>No forms found.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+
+    <div class="d-flex justify-end mt-4 mb-4">
+        <MudButton Variant="Variant.Text" OnClick="Cancel" Class="mr-2">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Save</MudButton>
+    </div>
+</MudForm>

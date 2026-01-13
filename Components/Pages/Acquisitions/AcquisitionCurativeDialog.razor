@@ -1,0 +1,59 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@AcqRequirement" @ref="_form">
+            <MudGrid>
+                 <MudItem xs="12">
+                     <MudSelect T="int" Label="Requirement Type" @bind-Value="AcqRequirement.CurativeTypeID" Required="true">
+                        @foreach (var t in CurativeTypes)
+                        {
+                            <MudSelectItem Value="@t.CurativeTypeID">@t.CurativeTypeName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField Label="Notes" @bind-Value="AcqRequirement.Notes" Lines="3" />
+                </MudItem>
+                
+                <MudItem xs="12" sm="6">
+                     <MudDatePicker Label="Completed Date" @bind-Date="AcqRequirement.CompletedDate" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcqCurativeRequirement AcqRequirement { get; set; } = new();
+    [Parameter] public List<CurativeType> CurativeTypes { get; set; } = new();
+
+    private MudForm _form = default!;
+    
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+             // Populate nav prop
+            var selectedType = CurativeTypes.FirstOrDefault(t => t.CurativeTypeID == AcqRequirement.CurativeTypeID);
+            if (selectedType != null)
+            {
+                AcqRequirement.CurativeType = selectedType;
+            }
+            
+            MudDialog.Close(DialogResult.Ok(AcqRequirement));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

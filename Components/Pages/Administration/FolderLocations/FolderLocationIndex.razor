@@ -1,0 +1,93 @@
+@page "/system/folderlocations"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject FolderLocationRepository Repository
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Folder Locations</MudText>
+
+<MudDataGrid T="FolderLocation" Items="@_items" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add Folder Location</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.FolderLocationText" Title="Folder Location" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<FolderLocation> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _items = (await Repository.GetAllAsync()).ToList();
+    }
+
+    private async Task Add()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<FolderLocationDialog>("Add Folder Location", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is FolderLocation newItem)
+        {
+            await Repository.AddAsync(newItem);
+            await Repository.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Folder Location added", Severity.Success);
+        }
+    }
+
+    private async Task Edit(FolderLocation item)
+    {
+        // simplistic clone
+        var clone = new FolderLocation { FolderLocationID = item.FolderLocationID, FolderLocationText = item.FolderLocationText };
+        var parameters = new DialogParameters<FolderLocationDialog> { { x => x.Model, clone } };
+        var dialog = await DialogService.ShowAsync<FolderLocationDialog>("Edit Folder Location", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is FolderLocation updatedModel)
+        {
+             item.FolderLocationText = updatedModel.FolderLocationText;
+             Repository.Update(item);
+             await Repository.SaveChangesAsync();
+             Snackbar.Add("Folder Location updated", Severity.Success);
+        }
+    }
+
+    private async Task Delete(FolderLocation item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{item.FolderLocationText}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await Repository.DeleteWithGuardAsync(item.FolderLocationID);
+                await LoadData();
+                Snackbar.Add("Folder Location deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

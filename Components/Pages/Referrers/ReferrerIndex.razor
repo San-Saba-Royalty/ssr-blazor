@@ -1,0 +1,233 @@
+@page "/referrers"
+@page "/referrer/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+@inject ReferrerUiService ReferrerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Referrers</PageTitle>
+
+@* Messages Section *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _displayMessage = string.Empty">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+        @_errorMessage
+    </MudAlert>
+}
+
+@* Header Section *@
+<MudPaper Elevation="1" Class="pa-3 mb-3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.h6">Referrers</MudText>
+        
+        <MudSpacer />
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.FilterAltOff"
+                   OnClick="@ResetFilters">
+            Reset Filters
+        </MudButton>
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.SortByAlpha"
+                   OnClick="@ResetSort">
+            Reset Sort
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@* Data Grid Section *@
+<MudPaper Elevation="1" Class="pa-0">
+    <MudDataGrid @ref="_dataGrid"
+                 T="Referrer"
+                 ServerData="LoadServerData"
+                 Filterable="true"
+                 FilterMode="DataGridFilterMode.ColumnFilterRow"
+                 SortMode="SortMode.Multiple"
+                 Groupable="false"
+                 Hover="true"
+                 Dense="true"
+                 FixedHeader="true"
+                 Height="calc(100vh - 280px)"
+                 RowClick="@OnRowClick"
+                 RowStyleFunc="@RowStyleFunc">
+        <ToolBarContent>
+            <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                <MudTooltip Text="Add New Referrer">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                   Color="Color.Primary" 
+                                   OnClick="@AddNewReferrer" />
+                </MudTooltip>
+                <MudTooltip Text="Edit Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                   Color="Color.Default"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@EditSelectedReferrer" />
+                </MudTooltip>
+                <MudTooltip Text="Delete Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@DeleteSelectedReferrer" />
+                </MudTooltip>
+                
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                
+                <MudTooltip Text="Export to Excel">
+                    <MudIconButton Icon="@Icons.Material.Filled.FileDownload" 
+                                   Color="Color.Success"
+                                   OnClick="@ExportToExcel" />
+                </MudTooltip>
+            </MudStack>
+            <MudSpacer />
+            <MudText Typo="Typo.caption" Class="mr-4">
+                Total: @_totalCount referrers
+            </MudText>
+        </ToolBarContent>
+        
+        <Columns>
+            @* Referrer ID - Hidden *@
+            <PropertyColumn Property="x => x.ReferrerID" Title="ID" 
+                            Hidden="true"
+                            Sortable="true" Filterable="false"
+                            HeaderStyle="width: 60px;" />
+            
+            @* Referrer Name *@
+            <PropertyColumn Property="x => x.ReferrerName" Title="Referrer Name" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 220px;">
+                <FooterTemplate>
+                    Count: @_totalCount
+                </FooterTemplate>
+            </PropertyColumn>
+            
+            @* Referrer Tax ID *@
+            <PropertyColumn Property="x => x.ReferrerTaxID" Title="Referrer Tax ID" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Contact Name *@
+            <PropertyColumn Property="x => x.ContactName" Title="Contact Name" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 150px;" />
+            
+            @* Contact Email *@
+            <PropertyColumn Property="x => x.ContactEmail" Title="Contact Email" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 200px;">
+                <CellTemplate>
+                    @if (!string.IsNullOrEmpty(context.Item.ContactEmail))
+                    {
+                        <MudLink Href="@($"mailto:{context.Item.ContactEmail}")" Target="_blank">
+                            @context.Item.ContactEmail
+                        </MudLink>
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+            
+            @* Contact Phone *@
+            <PropertyColumn Property="x => x.ContactPhone" Title="Contact Phone"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 120px;">
+                <CellTemplate>
+                    @if (!string.IsNullOrEmpty(context.Item.ContactPhone))
+                    {
+                        <MudLink Href="@($"tel:{context.Item.ContactPhone}")">
+                            @context.Item.ContactPhone
+                        </MudLink>
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+            
+            @* Address (Template Column) *@
+            <TemplateColumn Title="Address" 
+                            Sortable="false" Filterable="false"
+                            HeaderStyle="width: 250px;">
+                <CellTemplate>
+                    @GetFullAddress(context.Item)
+                </CellTemplate>
+            </TemplateColumn>
+            
+            @* City *@
+            <PropertyColumn Property="x => x.City" Title="City" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 120px;" />
+            
+            @* State Code *@
+            <PropertyColumn Property="x => x.StateCode" Title="State" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 70px;" />
+            
+            @* Zip Code *@
+            <PropertyColumn Property="x => x.ZipCode" Title="Zip Code" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 90px;" />
+            
+        </Columns>
+        
+        <PagerContent>
+            <MudDataGridPager T="Referrer" 
+                              PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
+        </PagerContent>
+        
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1">No referrers found.</MudText>
+        </NoRecordsContent>
+        
+        <LoadingContent>
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </LoadingContent>
+    </MudDataGrid>
+</MudPaper>
+
+@* Context Menu *@
+<MudMenu @ref="_contextMenu" PositionAtCursor="true">
+    <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@AddNewReferrer">Add</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@EditSelectedReferrer" Disabled="@(_selectedItem == null)">Edit</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@DeleteSelectedReferrer" Disabled="@(_selectedItem == null)">Delete</MudMenuItem>
+</MudMenu>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedItem != null)
+        {
+            <MudText>Are you sure you want to delete this referrer?</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mt-2">
+                <strong>@_selectedItem.ReferrerName</strong>
+            </MudText>
+            
+            @if (_hasAssociatedAcquisitions)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-3" Dense="true">
+                    This referrer has associated acquisitions. Deleting may affect related records.
+                </MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>

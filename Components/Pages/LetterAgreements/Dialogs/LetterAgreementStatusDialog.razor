@@ -1,0 +1,62 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_status.DealStatusCode" Label="Status" Required="true">
+                    <MudSelectItem T="string?" Value="@((string?)null)">-- Select --</MudSelectItem>
+                    @foreach (var status in _statuses)
+                    {
+                        <MudSelectItem T="string?" Value="@status.DealStatusCode">@status.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_statusDate" Label="Status Date" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Add Status</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int LetterAgreementId { get; set; }
+
+    [Parameter]
+    public List<LetterAgreementDealStatus> Statuses { get; set; } = new();
+
+    private LetterAgreementStatus _status = new();
+    private List<LetterAgreementDealStatus> _statuses = new();
+    private DateTime? _statusDate = DateTime.Today;
+
+    protected override void OnInitialized()
+    {
+        _statuses = Statuses;
+        _status = new LetterAgreementStatus
+        {
+            LetterAgreementID = LetterAgreementId,
+            StatusDate = DateTime.Now
+        };
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_status.DealStatusCode))
+        {
+            return;
+        }
+
+        _status.StatusDate = _statusDate ?? DateTime.Now;
+        MudDialog.Close(DialogResult.Ok(_status));
+    }
+}

@@ -1,0 +1,82 @@
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using System.IO
+
+@inject ReferrerUiService ReferrerService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="@_formModel">
+            <MudSelect T="string" Label="Form Type" @bind-Value="_formModel.FormTypeCode" Required="true" RequiredError="Form Type is required">
+                <MudSelectItem Value="@("1099")">1099</MudSelectItem>
+                <MudSelectItem Value="@("W9")">W9</MudSelectItem>
+            </MudSelect>
+            
+            <MudTextField Label="Year" @bind-Value="_formModel.FormYear" Required="true" RequiredError="Year is required" MaxLength="4" HelperText="YYYY" />
+
+            <div class="d-flex align-center mt-4">
+                <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
+                            Select File
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+                <MudText Class="ml-4">@(_file?.Name ?? "No file selected")</MudText>
+            </div>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(_file == null)">Upload</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public int ReferrerId { get; set; }
+
+    private ReferrerForm _formModel = new();
+    private MudForm _form = default!;
+    private IBrowserFile? _file;
+
+    protected override void OnInitialized()
+    {
+        _formModel.ReferrerID = ReferrerId;
+        _formModel.FormYear = DateTime.Now.Year.ToString();
+    }
+
+    private void UploadFiles(IBrowserFile file)
+    {
+        _file = file;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_form.IsValid || _file == null) return;
+
+        try
+        {
+            // Max 10MB
+            using var stream = _file.OpenReadStream(10 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            await ReferrerService.UploadReferrerFormAsync(_formModel, memoryStream, _file.Name);
+
+            Snackbar.Add("Form uploaded successfully", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error uploading form: {ex.Message}", Severity.Error);
+        }
+    }
+}

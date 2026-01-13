@@ -1,0 +1,146 @@
+@page "/operator/check-statement"
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@inject OperatorService OperatorService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Generate Check Statement Cover Sheets - San Saba Royalty</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h5">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2 mb-n1" />
+                Generate Check Statement Barcode Cover Sheet(s)
+            </MudText>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToOperators">Back to Operators</MudButton>
+        </MudStack>
+
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Add multiple operators to generate a bulk check statement cover sheet document.
+        </MudAlert>
+
+        <MudSimpleTable Style="overflow-x: auto;">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Operator</th>
+                    <th style="width: 30%;">Check Date</th>
+                    <th style="width: 20%;"># Copies</th>
+                    <th style="width: 10%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var request in _requests)
+                {
+                    <tr>
+                        <td>
+                            <MudSelect T="int" @bind-Value="request.OperatorID" Label="Select Operator" Required="true" Dense="true" Margin="Margin.Dense">
+                                <MudSelectItem Value="0">-- Select One --</MudSelectItem>
+                                @foreach (var op in _operators)
+                                {
+                                    <MudSelectItem Value="op.Value">@op.Text</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </td>
+                        <td>
+                            <MudDatePicker @bind-Date="request.CheckDate" Label="Check Date" Editable="true" Required="true" Dense="true" Margin="Margin.Dense" />
+                        </td>
+                        <td>
+                            <MudNumericField @bind-Value="request.NumberOfCopies" Label="Copies" Min="1" Max="999" Required="true" Dense="true" Margin="Margin.Dense" />
+                        </td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveRow(request))" Disabled="@(_requests.Count <= 1)" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="AddRow" Color="Color.Primary">Add Row</MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.FileDownload" 
+                       OnClick="GenerateAsync" Disabled="_processing">
+                @if (_processing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Generating...</MudText>
+                }
+                else
+                {
+                    <MudText>Generate Cover Sheet(s)</MudText>
+                }
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<CheckStatementRequest> _requests = new();
+    private List<(int Value, string Text)> _operators = new();
+    private bool _processing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load operators for dropdown
+        var ops = await OperatorService.GetAllAsync();
+        _operators = ops.OrderBy(o => o.OperatorName).Select(o => (o.OperatorID, o.OperatorName)).ToList();
+
+        // Initial row
+        AddRow();
+    }
+
+    private void AddRow()
+    {
+        _requests.Add(new CheckStatementRequest());
+    }
+
+    private void RemoveRow(CheckStatementRequest request)
+    {
+        if (_requests.Count > 1)
+        {
+            _requests.Remove(request);
+        }
+    }
+
+    private void BackToOperators() => NavigationManager.NavigateTo("/operators");
+
+    private async Task GenerateAsync()
+    {
+        // Validation
+        if (_requests.Any(r => r.OperatorID == 0 || r.CheckDate == null))
+        {
+            Snackbar.Add("Please fill in all required fields", Severity.Warning);
+            return;
+        }
+
+        _processing = true;
+        try
+        {
+            // Populate OperatorNames for the requests
+            foreach (var req in _requests)
+            {
+                req.OperatorName = _operators.FirstOrDefault(o => o.Value == req.OperatorID).Text ?? "Unknown";
+            }
+
+            var (success, fileName, error) = await OperatorService.GenerateCheckStatementsAsync(_requests);
+            if (success && fileName != null)
+            {
+                Snackbar.Add("Check statements generated successfully", Severity.Success);
+                // In a real app, we would trigger a download here
+                // For now, we simulate the completion
+                NavigationManager.NavigateTo($"/file-viewer?fn={fileName}");
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error generating check statements", Severity.Error);
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

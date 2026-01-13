@@ -1,0 +1,141 @@
+@page "/appraisal-groups"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Components.Pages.AppraisalGroups
+@inject AppraisalGroupService AppraisalGroupService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Appraisal Groups</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Appraisal Groups</MudText>
+
+    <MudDataGrid T="AppraisalGroup" Items="@_appraisalGroups" Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@_quickFilter">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Appraisal Groups</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAppraisalGroup" Class="ml-4">Add Appraisal Group</MudButton>
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.AppraisalGroupName" Title="Name" Sortable="true" Filterable="true" />
+            <PropertyColumn Property="x => x.ContactName" Title="Contact" />
+            <PropertyColumn Property="x => x.City" Title="City" />
+            <PropertyColumn Property="x => x.StateCode" Title="State" />
+            <PropertyColumn Property="x => x.ZipCode" Title="Zip" />
+            <PropertyColumn Property="x => x.ContactPhone" Title="Phone" />
+            <TemplateColumn CellClass="d-flex justify-end">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditAppraisalGroup(context.Item))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAppraisalGroup(context.Item))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="AppraisalGroup" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<AppraisalGroup> _appraisalGroups = new();
+    private string _searchString;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _appraisalGroups = await AppraisalGroupService.GetAllAsync();
+    }
+
+    private Func<AppraisalGroup, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.AppraisalGroupName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(x.ContactName) && x.ContactName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        
+        if (!string.IsNullOrWhiteSpace(x.City) && x.City.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+
+    private async Task AddAppraisalGroup()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<AppraisalGroupDialog>("Add Appraisal Group", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newGroup = (AppraisalGroup)result.Data;
+            try 
+            {
+                await AppraisalGroupService.AddAsync(newGroup);
+                Snackbar.Add("Appraisal Group added", Severity.Success);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error adding group: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task EditAppraisalGroup(AppraisalGroup group)
+    {
+        var parameters = new DialogParameters { ["AppraisalGroup"] = group };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<AppraisalGroupDialog>("Edit Appraisal Group", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var updatedGroup = (AppraisalGroup)result.Data;
+            try
+            {
+                await AppraisalGroupService.UpdateAsync(updatedGroup);
+                Snackbar.Add("Appraisal Group updated", Severity.Success);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating group: {ex.Message}", Severity.Error);
+                await LoadData(); // Reload to reset state
+            }
+        }
+    }
+
+    private async Task DeleteAppraisalGroup(AppraisalGroup group)
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning", 
+            $"Are you sure you want to delete '{group.AppraisalGroupName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await AppraisalGroupService.DeleteAsync(group.AppraisalGroupID);
+                Snackbar.Add("Appraisal Group deleted", Severity.Success);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting group: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

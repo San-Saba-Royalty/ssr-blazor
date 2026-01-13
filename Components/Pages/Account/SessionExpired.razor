@@ -1,0 +1,17 @@
+@page "/account/session-expired"
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="my-2">
+        Your session has expired.
+    </MudAlert>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Please log in again to continue.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Link="/account/login">Log In</MudButton>
+</MudContainer>
+
+@code {
+}

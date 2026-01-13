@@ -1,0 +1,124 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_unit.UnitName" Label="Unit Name" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect @bind-Value="_unit.UnitTypeCode" Label="Unit Type">
+                    <MudSelectItem T="string?" Value="@((string?)null)">-- Select --</MudSelectItem>
+                    <MudSelectItem T="string?" Value="@("LEASE")">Lease</MudSelectItem>
+                    <MudSelectItem T="string?" Value="@("POOLED")">Pooled</MudSelectItem>
+                    <MudSelectItem T="string?" Value="@("UNIT")">Unit</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="_unit.GrossAcres" Label="Gross Acres" Format="F8" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="_unit.NetAcres" Label="Net Acres" Format="F8" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField @bind-Value="_unit.UnitInterest" Label="Unit Interest" Format="P5" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_unit.Surveys" Label="Surveys" />
+            </MudItem>
+
+            <MudItem xs="6" md="3">
+                <MudNumericField @bind-Value="_unit.TownshipNum" Label="Township" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSelect @bind-Value="_unit.TownshipDir" Label="T Dir">
+                    <MudSelectItem T="char?" Value="@((char?)null)">--</MudSelectItem>
+                    <MudSelectItem T="char?" Value="@('N')">N</MudSelectItem>
+                    <MudSelectItem T="char?" Value="@('S')">S</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField @bind-Value="_unit.RangeNum" Label="Range" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSelect @bind-Value="_unit.RangeDir" Label="R Dir">
+                    <MudSelectItem T="char?" Value="@((char?)null)">--</MudSelectItem>
+                    <MudSelectItem T="char?" Value="@('E')">E</MudSelectItem>
+                    <MudSelectItem T="char?" Value="@('W')">W</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_unit.SectionNum" Label="Section" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_unit.LegalDescription" Label="Legal Description" Lines="3" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            @(IsEdit ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public LetterAgreementUnit? Unit { get; set; }
+
+    [Parameter]
+    public int LetterAgreementId { get; set; }
+
+    private LetterAgreementUnit _unit = new();
+    private bool IsEdit => Unit != null && Unit.LetterAgreementUnitID > 0;
+
+    protected override void OnInitialized()
+    {
+        if (Unit != null)
+        {
+            _unit = new LetterAgreementUnit
+            {
+                LetterAgreementUnitID = Unit.LetterAgreementUnitID,
+                LetterAgreementID = Unit.LetterAgreementID,
+                UnitName = Unit.UnitName,
+                UnitTypeCode = Unit.UnitTypeCode,
+                UnitInterest = Unit.UnitInterest,
+                GrossAcres = Unit.GrossAcres,
+                NetAcres = Unit.NetAcres,
+                Surveys = Unit.Surveys,
+                TownshipNum = Unit.TownshipNum,
+                TownshipDir = Unit.TownshipDir,
+                RangeNum = Unit.RangeNum,
+                RangeDir = Unit.RangeDir,
+                SectionNum = Unit.SectionNum,
+                LegalDescription = Unit.LegalDescription
+            };
+        }
+        else
+        {
+            _unit = new LetterAgreementUnit
+            {
+                LetterAgreementID = LetterAgreementId
+            };
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_unit.UnitName))
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(_unit));
+    }
+}

@@ -1,0 +1,93 @@
+@using MudBlazor
+@page "/system/curativetypes"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject CurativeTypeRepository Repository
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Curative Types</MudText>
+
+<MudDataGrid T="CurativeType" Items="@_items" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add Curative Type</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.CurativeTypeName" Title="Curative Type Name" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<CurativeType> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _items = (await Repository.GetAllAsync()).ToList();
+    }
+
+    private async Task Add()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<CurativeTypeDialog>("Add Curative Type", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is CurativeType newItem)
+        {
+            await Repository.AddAsync(newItem);
+            await Repository.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Curative Type added", Severity.Success);
+        }
+    }
+
+    private async Task Edit(CurativeType item)
+    {
+        var clone = new CurativeType { CurativeTypeID = item.CurativeTypeID, CurativeTypeName = item.CurativeTypeName };
+        var parameters = new DialogParameters<CurativeTypeDialog> { { x => x.Model, clone } };
+        var dialog = await DialogService.ShowAsync<CurativeTypeDialog>("Edit Curative Type", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is CurativeType updatedModel)
+        {
+             item.CurativeTypeName = updatedModel.CurativeTypeName;
+             Repository.Update(item);
+             await Repository.SaveChangesAsync();
+             Snackbar.Add("Curative Type updated", Severity.Success);
+        }
+    }
+
+    private async Task Delete(CurativeType item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{item.CurativeTypeName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await Repository.DeleteWithGuardAsync(item.CurativeTypeID);
+                await LoadData();
+                Snackbar.Add("Curative Type deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,160 @@
+@page "/operator/add"
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@inject OperatorService OperatorService
+@inject LookUpService LookUpService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Add Operator - San Saba Royalty</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudText Typo="Typo.h5" GutterBottom="true">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2 mb-n1" />
+            Add New Operator
+        </MudText>
+
+        <MudForm @ref="_form" @bind-IsValid="_formIsValid" Class="mt-4">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Operator Name" @bind-Value="_operator.OperatorName" 
+                                  Required="true" RequiredError="Operator Name is required"
+                                  Validation="@(new Func<string, Task<string?>>(ValidateName))"
+                                  MaxLength="100" Counter="100" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.h6">Main Contact</MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Contact Name" @bind-Value="_operator.ContactName" MaxLength="50" Counter="50" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Contact Email" @bind-Value="_operator.ContactEmail" 
+                                  MaxLength="50" Counter="50" Validation="@(new Func<string, Task<string?>>(ValidateEmail))" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Contact Phone" @bind-Value="_operator.ContactPhone" 
+                                  MaxLength="24" OnBlur="FormatPhone" HelperText="Format: 000-000-0000" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Contact Fax" @bind-Value="_operator.ContactFax" 
+                                  MaxLength="24" OnBlur="FormatFax" HelperText="Format: 000-000-0000" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.h6">Address</MudText>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Address Line 1" @bind-Value="_operator.AddressLine1" MaxLength="100" Counter="100" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Address Line 2" @bind-Value="_operator.AddressLine2" MaxLength="100" Counter="100" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="City" @bind-Value="_operator.City" MaxLength="50" Counter="50" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="string" Label="State" @bind-Value="_operator.StateCode">
+                        <MudSelectItem Value="@((string?)null)">-- Select One --</MudSelectItem>
+                        @foreach (var state in _states)
+                        {
+                            <MudSelectItem Value="state.StateCode">@state.StateCode</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudTextField T="string" Label="Zip Code" @bind-Value="_operator.ZipCode" MaxLength="10" />
+                </MudItem>
+
+                <MudItem xs="12" Class="d-flex justify-end mt-6">
+                    <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="Cancel" Class="mr-2">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="!_formIsValid || _processing">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Saving...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Save Operator</MudText>
+                        }
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private Operator _operator = new();
+    private MudForm _form = null!;
+    private bool _formIsValid;
+    private bool _processing;
+    private List<State> _states = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _states = await LookUpService.GetStatesAsync();
+    }
+
+    private async Task<string?> ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var exists = await OperatorService.DoesOperatorNameExistAsync(name);
+        return exists ? "An operator with this name already exists" : null;
+    }
+
+    private async Task<string?> ValidateEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        var isValid = await OperatorService.ValidateEmailAsync(email);
+        return isValid ? null : "Invalid email address";
+    }
+
+    private void FormatPhone() => _operator.ContactPhone = FormatPhoneNumber(_operator.ContactPhone);
+    private void FormatFax() => _operator.ContactFax = FormatPhoneNumber(_operator.ContactFax);
+
+    private string? FormatPhoneNumber(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return phone;
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+        if (digits.Length == 7) return $"{digits[..3]}-{digits[3..]}";
+        if (digits.Length == 10) return $"{digits[..3]}-{digits[3..6]}-{digits[6..]}";
+        if (digits.Length == 11) return $"{digits[0]}-{digits[1..4]}-{digits[4..7]}-{digits[7..]}";
+        return phone;
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/operators");
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_formIsValid) return;
+
+        _processing = true;
+        try
+        {
+            var (success, created, error) = await OperatorService.CreateAsync(_operator);
+            if (success)
+            {
+                Snackbar.Add("Operator created successfully", Severity.Success);
+                NavigationManager.NavigateTo($"/operator/edit/{created!.OperatorID}");
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error creating operator", Severity.Error);
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

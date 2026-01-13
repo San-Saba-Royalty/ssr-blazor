@@ -1,0 +1,115 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_referrer.ReferrerID" Label="Referrer" Required="true">
+                    <MudSelectItem T="int" Value="0">-- Select --</MudSelectItem>
+                    @foreach (var referrer in _referrers)
+                    {
+                        <MudSelectItem T="int" Value="@referrer.ReferrerID">@referrer.ReferrerName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_referrer.ReferralAmount" 
+                                 Label="Referral Amount" 
+                                 Format="C2"
+                                 Disabled="@(_referrer.ReferralPercent.HasValue)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_referrer.ReferralPercent" 
+                                 Label="Referral Percent" 
+                                 Format="P2"
+                                 Disabled="@(_referrer.ReferralAmount.HasValue)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox @bind-Value="_referrer.SellerPaysReferralAmount" 
+                             Label="Seller Pays Referral Amount" />
+            </MudItem>
+        </MudGrid>
+        
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        @if (IsEdit)
+        {
+            <MudButton Color="Color.Error" OnClick="Delete">Delete</MudButton>
+        }
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            @(IsEdit ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public LetterAgreementReferrer? Referrer { get; set; }
+
+    [Parameter]
+    public int LetterAgreementId { get; set; }
+
+    [Parameter]
+    public List<Referrer> Referrers { get; set; } = new();
+
+    private LetterAgreementReferrer _referrer = new();
+    private List<Referrer> _referrers = new();
+    private string? _errorMessage;
+    private bool IsEdit => Referrer != null && Referrer.LetterAgreementReferrerID > 0;
+
+    protected override void OnInitialized()
+    {
+        _referrers = Referrers;
+
+        if (Referrer != null)
+        {
+            _referrer = new LetterAgreementReferrer
+            {
+                LetterAgreementReferrerID = Referrer.LetterAgreementReferrerID,
+                LetterAgreementID = Referrer.LetterAgreementID,
+                ReferrerID = Referrer.ReferrerID,
+                ReferralAmount = Referrer.ReferralAmount,
+                ReferralPercent = Referrer.ReferralPercent,
+                SellerPaysReferralAmount = Referrer.SellerPaysReferralAmount
+            };
+        }
+        else
+        {
+            _referrer = new LetterAgreementReferrer
+            {
+                LetterAgreementID = LetterAgreementId
+            };
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Delete() => MudDialog.Close(DialogResult.Ok<LetterAgreementReferrer?>(null));
+
+    private void Submit()
+    {
+        _errorMessage = null;
+
+        if (_referrer.ReferrerID == 0)
+        {
+            _errorMessage = "Please select a referrer";
+            return;
+        }
+
+        if (_referrer.ReferralAmount.HasValue && _referrer.ReferralPercent.HasValue)
+        {
+            _errorMessage = "Please enter either a referral amount or a referral percent - not both.";
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_referrer));
+    }
+}

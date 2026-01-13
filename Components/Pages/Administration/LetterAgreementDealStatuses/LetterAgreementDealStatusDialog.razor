@@ -1,0 +1,62 @@
+@using MudBlazor
+@using SSRBusiness.Entities
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Model" @ref="_form">
+            @if (IsEdit)
+            {
+                <MudTextField Value="Model.DealStatusCode" 
+                              Label="Deal Status Code" 
+                              ReadOnly="true" 
+                              HelperText="Cannot be changed once created." 
+                              Class="mb-4"/>
+            }
+            else
+            {
+                <MudTextField @bind-Value="Model.DealStatusCode" 
+                              Label="Deal Status Code" 
+                              Required="true" 
+                              RequiredError="Code is required."
+                              MaxLength="5" 
+                              Class="mb-4"/>
+            }
+            
+            
+            <MudTextField @bind-Value="Model.StatusName" 
+                          Label="Status Name" 
+                          Required="true" 
+                          RequiredError="Status Name is required."
+                          MaxLength="50"
+                          Class="mb-4"/>
+            
+            <MudCheckBox @bind-Value="Model.DefaultStatus" Label="Default Status" Color="Color.Primary" />
+            <MudCheckBox @bind-Value="Model.ExcludeFromReports" Label="Exclude From Reports" Color="Color.Secondary" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public LetterAgreementDealStatus Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

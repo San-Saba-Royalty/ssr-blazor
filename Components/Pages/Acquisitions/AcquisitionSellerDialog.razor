@@ -1,0 +1,69 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Seller" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Seller.SellerLastName" Label="Last Name" MaxLength="30" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Seller.SellerName" Label="First Name / Company" MaxLength="100" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Seller.AddressLine1" Label="Address Line 1" MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Seller.AddressLine2" Label="Address Line 2" MaxLength="100" />
+                </MudItem>
+                
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Seller.City" Label="City" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTextField @bind-Value="Seller.StateCode" Label="State" MaxLength="2" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTextField @bind-Value="Seller.ZipCode" Label="Zip Code" MaxLength="10" />
+                </MudItem>
+                
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Seller.ContactPhone" Label="Phone" MaxLength="24" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Seller.ContactFax" Label="Fax" MaxLength="24" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Seller.ContactEmail" Label="Email" MaxLength="50" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionSeller Seller { get; set; } = new();
+
+    private MudForm _form = default!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Seller));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,177 @@
+@page "/acquisition/copy/{AcquisitionId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using SSRBlazor.Services
+@using SSRBusiness.Entities
+@using MudBlazor
+@attribute [Authorize]
+@inject AcquisitionService AcquisitionService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Copy Acquisition</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Copy Acquisition #@AcquisitionId</MudText>
+    
+    @if (_isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_sourceAcquisition == null)
+    {
+        <MudAlert Severity="Severity.Error">Acquisition not found.</MudAlert>
+    }
+    else
+    {
+        <MudText Class="mb-4">Select which elements to copy from Acquisition #@AcquisitionId (@_sourceAcquisition.Buyer)</MudText>
+
+        <EditForm Model="@_options" OnValidSubmit="CopyAcquisition">
+            <DataAnnotationsValidator />
+            
+            <MudGrid>
+                @* Seller Information *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudCheckBox @bind-Value="_options.CopySellerInformation" Label="Seller Information" Color="Color.Primary" Dense="true" />
+                        <MudDivider Class="my-2"/>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Includes all seller contact details (Name, Address, Phone, etc.)</MudText>
+                    </MudPaper>
+                </MudItem>
+
+                @* Deed and Draft Information *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.subtitle2">Deed & Draft Info</MudText>
+                        <MudDivider Class="my-1"/>
+                        <MudCheckBox @bind-Value="_options.CopyEffectiveDate" Label="Effective Date" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyBuyerEffectiveDate" Label="Buyer Eff. Date" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyDueDate" Label="Due Date" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyPaidDate" Label="Paid Date" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyTotalBonus" Label="Total Bonus" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyConsiderationFee" Label="Consideration Fee" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyTakeConsiderationFromTotal" Label="Take Cons. From Total" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyTotal" Label="Total Bonus+Fee" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyDraftFee" Label="Draft Fee" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyDraftCheckNumber" Label="Draft/Check #" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyTaxesDue" Label="Taxes Due" Dense="true" />
+                    </MudPaper>
+                </MudItem>
+
+                @* Title Information *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.subtitle2">Title Info</MudText>
+                        <MudDivider Class="my-1"/>
+                        <MudCheckBox @bind-Value="_options.CopyCheckStub" Label="Check Stub" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyFieldCheck" Label="Field Check" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyLandMan" Label="Landman" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyFieldLandman" Label="Field Landman" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyLiens" Label="Liens" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyLienAmount" Label="Lien Amount" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyTitleOpinion" Label="Title Opinion" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyClosingStatus" Label="Closing Status" Dense="true" />
+                    </MudPaper>
+                </MudItem>
+
+                @* Buyer Information *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.subtitle2">Buyer Info</MudText>
+                        <MudDivider Class="my-1"/>
+                        <MudCheckBox @bind-Value="_options.CopyBuyer" Label="Buyer" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyAcquisitionNumber" Label="Acq Number" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyAssignee" Label="Assignee" Dense="true" />
+                    </MudPaper>
+                </MudItem>
+
+                @* Invoicing Information *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.subtitle2">Invoicing Info</MudText>
+                        <MudDivider Class="my-1"/>
+                        <MudCheckBox @bind-Value="_options.CopyInvoiceNumber" Label="Invoice #" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyInvoiceDate" Label="Invoice Date" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyInvoiceDueDate" Label="Invoice Due" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyInvoicePaidDate" Label="Invoice Paid" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyInvoiceTotal" Label="Invoice Total" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyCommission" Label="Commission" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyCommissionPercent" Label="Comm %" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyAutoCalculateInvoice" Label="Auto Calc Invoice" Dense="true" />
+                    </MudPaper>
+                </MudItem>
+                
+                 @* Property/Sub-Entities Setup *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.subtitle2">Property Setup</MudText>
+                        <MudDivider Class="my-1"/>
+                        <MudCheckBox @bind-Value="_options.CopyUnits" Label="Copy Units" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyCounties" Label="Copy Counties" Dense="true" />
+                        <MudCheckBox @bind-Value="_options.CopyOperators" Label="Copy Operators" Dense="true" />
+                         <MudDivider Class="my-2"/>
+                        <MudCheckBox @bind-Value="_options.CopyNotes" Label="Copy Notes" Color="Color.Default" Dense="true" />
+                    </MudPaper>
+                </MudItem>
+
+                @* Actions *@
+                <MudItem xs="12" Class="d-flex justify-center gap-4 mt-4">
+                    <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Secondary">Cancel</MudButton>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Filled.ContentCopy">
+                        Copy Acquisition
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int AcquisitionId { get; set; }
+
+    private Acquisition? _sourceAcquisition;
+    private AcquisitionCopyOptions _options = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            _sourceAcquisition = await AcquisitionService.GetByIdAsync(AcquisitionId);
+            if (_sourceAcquisition == null)
+            {
+                Snackbar.Add("Acquisition not found", Severity.Error);
+                Navigation.NavigateTo("/acquisitions");
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading acquisition: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CopyAcquisition()
+    {
+        try
+        {
+            _isLoading = true;
+            var newId = await AcquisitionService.CopyAsync(AcquisitionId, _options);
+            Snackbar.Add($"Acquisition copied successfully to ID {newId}", Severity.Success);
+            Navigation.NavigateTo($"/acquisition/edit/{newId}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error copying: {ex.Message}", Severity.Error);
+            _isLoading = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/acquisitions");
+    }
+}

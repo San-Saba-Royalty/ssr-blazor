@@ -1,0 +1,111 @@
+@page "/operator/check-statement-capture"
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@inject OperatorService OperatorService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Auto Capture Check Statement - San Saba Royalty</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Class="mr-2 mb-n1" />
+            Check Statement Auto Capture
+        </MudText>
+
+        <MudForm @ref="_form" @bind-IsValid="_formIsValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudAutocomplete T="Operator" Label="Search Operator" @bind-Value="_selectedOperator"
+                                     SearchFunc="@SearchOperators" ToStringFunc="@(o => o?.OperatorName ?? "")"
+                                     Required="true" RequiredError="Operator is required" 
+                                     ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_checkDate" Label="Check Date" Required="true" RequiredError="Check Date is required" Editable="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField @bind-Value="_numberCopies" Label="Number of Copies" Min="1" Max="99" Required="true" />
+                </MudItem>
+                <MudItem xs="12" Class="d-flex justify-end gap-2 mt-4">
+                    <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateAsync" Disabled="!_formIsValid || _processing">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Generating...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Generate</MudText>
+                        }
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery] public int? oid { get; set; }
+
+    private MudForm _form = null!;
+    private bool _formIsValid;
+    private bool _processing;
+    
+    private Operator? _selectedOperator;
+    private DateTime? _checkDate = DateTime.Today;
+    private int _numberCopies = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (oid.HasValue)
+        {
+            _selectedOperator = await OperatorService.GetByIdAsync(oid.Value);
+        }
+    }
+
+    private async Task<IEnumerable<Operator>> SearchOperators(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return new List<Operator>();
+        var ops = await OperatorService.GetAllAsync();
+        return ops.Where(x => x.OperatorName.Contains(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/operators");
+
+    private async Task GenerateAsync()
+    {
+        await _form.Validate();
+        if (!_formIsValid || _selectedOperator == null) return;
+
+        _processing = true;
+        try
+        {
+            var request = new CheckStatementRequest
+            {
+                OperatorID = _selectedOperator.OperatorID,
+                OperatorName = _selectedOperator.OperatorName,
+                CheckDate = _checkDate,
+                NumberOfCopies = _numberCopies
+            };
+
+            var (success, fileName, error) = await OperatorService.GenerateCheckStatementsAsync(new List<CheckStatementRequest> { request });
+            if (success && fileName != null)
+            {
+                Snackbar.Add("Check statement generated successfully", Severity.Success);
+                NavigationManager.NavigateTo($"/file-viewer?fn={fileName}");
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error generating check statement", Severity.Error);
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

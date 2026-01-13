@@ -1,0 +1,142 @@
+@page "/buyers"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Components.Pages.Buyers
+@inject BuyerService BuyerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Buyers</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Buyers</MudText>
+
+    <MudDataGrid T="Buyer" Items="@_buyers" Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@_quickFilter">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Buyer List</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddBuyer" Class="ml-4">Add Buyer</MudButton>
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.BuyerName" Title="Name" Sortable="true" Filterable="true" />
+            <PropertyColumn Property="x => x.ContactName" Title="Contact" />
+            <PropertyColumn Property="x => x.City" Title="City" />
+            <PropertyColumn Property="x => x.StateCode" Title="State" />
+            <PropertyColumn Property="x => x.ContactPhone" Title="Phone" />
+            <PropertyColumn Property="x => x.DefaultBuyer" Title="Default" >
+                <CellTemplate>
+                    @if (context.Item.DefaultBuyer)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" />
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+            <TemplateColumn CellClass="d-flex justify-end">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditBuyer(context.Item))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteBuyer(context.Item))" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="Buyer" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<Buyer> _buyers = new();
+    private string? _searchString;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _buyers = await BuyerService.GetAllAsync();
+    }
+
+    private Func<Buyer, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.BuyerName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+            
+        if (!string.IsNullOrWhiteSpace(x.ContactName) && x.ContactName.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    };
+
+    private async Task AddBuyer()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<BuyerDialog>("Add Buyer", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            var newBuyer = (Buyer?)result.Data;
+            if (newBuyer != null)
+            {
+                try
+                {
+                    if (!await BuyerService.IsNameUniqueAsync(newBuyer.BuyerName))
+                    {
+                        Snackbar.Add($"Buyer '{newBuyer.BuyerName}' already exists.", Severity.Warning);
+                        return;
+                    }
+
+                    await BuyerService.CreateAsync(newBuyer);
+                    Snackbar.Add("Buyer added", Severity.Success);
+                    await LoadData();
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error adding buyer: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+    }
+
+    private void EditBuyer(Buyer buyer)
+    {
+        NavigationManager.NavigateTo($"/buyer/edit/{buyer.BuyerID}");
+    }
+
+    private async Task DeleteBuyer(Buyer buyer)
+    {
+        if (await BuyerService.HasAssociatedAcquisitionsAsync(buyer.BuyerID))
+        {
+             await DialogService.ShowMessageBox("Cannot Delete", "This buyer has associated acquisitions and cannot be deleted.");
+             return;
+        }
+
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning", 
+            $"Are you sure you want to delete '{buyer.BuyerName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await BuyerService.DeleteAsync(buyer.BuyerID);
+                Snackbar.Add("Buyer deleted", Severity.Success);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting buyer: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

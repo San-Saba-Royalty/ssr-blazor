@@ -1,0 +1,73 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Contact" @ref="_form">
+            <MudGrid>
+                @* Main Contact Info *@
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Contact.ContactName" Label="Contact Name" MaxLength="50" Required="false" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Contact.Attention" Label="Attention" MaxLength="50" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Contact.ContactPhone" Label="Phone" MaxLength="24" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Contact.ContactFax" Label="Fax" MaxLength="24" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Contact.ContactEmail" Label="Email" MaxLength="50" />
+                </MudItem>
+
+                @* Address Info *@
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Contact.AddressLine1" Label="Address Line 1" MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Contact.AddressLine2" Label="Address Line 2" MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12">
+                     <MudTextField @bind-Value="Contact.AddressLine3" Label="Address Line 3" MaxLength="100" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Contact.City" Label="City" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTextField @bind-Value="Contact.StateCode" Label="State" MaxLength="2" />
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTextField @bind-Value="Contact.ZipCode" Label="Zip Code" MaxLength="10" />
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public CountyContact Contact { get; set; } = new();
+
+    private MudForm _form = default!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Contact));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

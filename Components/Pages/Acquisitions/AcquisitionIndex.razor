@@ -1,0 +1,446 @@
+@page "/acquisitions"
+@page "/acquisition/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+@inject AcquisitionService AcquisitionService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Mineral Acquisitions</PageTitle>
+
+@* Messages Section *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _displayMessage = string.Empty">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (_validationErrors.Any())
+{
+    <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _validationErrors.Clear()">
+        <MudText Typo="Typo.subtitle2">The following errors were found:</MudText>
+        <ul class="mb-0">
+            @foreach (var error in _validationErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </MudAlert>
+}
+
+@* Header Section *@
+<MudPaper Elevation="1" Class="pa-3 mb-3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.h6">Mineral Acquisitions</MudText>
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   Size="Size.Small"
+                   OnClick="@GotoLetterAgreements">
+            Letter Agreements
+        </MudButton>
+        
+        <MudDivider Vertical="true" FlexItem="true" />
+        
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudText Typo="Typo.body2"><strong>Active Filter:</strong></MudText>
+            <MudMenu Label="@_activeFilter" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Info">
+                @foreach (var filter in _availableFilters)
+                {
+                    <MudMenuItem OnClick="@(() => ApplyFilter(filter.Name))">
+                        @if (filter.Name == _activeFilter)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-2" />
+                        }
+                        @filter.Name
+                    </MudMenuItem>
+                }
+            </MudMenu>
+        </MudStack>
+        
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudText Typo="Typo.body2"><strong>Active View:</strong></MudText>
+            <MudMenu Label="@_activeView" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary">
+                @foreach (var view in _availableViews)
+                {
+                    <MudMenuItem OnClick="@(() => ApplyView(view.Name))">
+                        @if (view.Name == _activeView)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-2" />
+                        }
+                        @view.Name
+                    </MudMenuItem>
+                }
+            </MudMenu>
+        </MudStack>
+        
+        <MudSpacer />
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.FilterAltOff"
+                   OnClick="@ResetFilters">
+            Reset Filters
+        </MudButton>
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.SortByAlpha"
+                   OnClick="@ResetSort">
+            Reset Sort
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@* Data Grid Section *@
+<MudPaper Elevation="1" Class="pa-0">
+    <MudDataGrid @ref="_dataGrid"
+                 T="Acquisition"
+                 ServerData="LoadServerData"
+                 Filterable="true"
+                 FilterMode="DataGridFilterMode.ColumnFilterRow"
+                 SortMode="SortMode.Multiple"
+                 Groupable="false"
+                 Hover="true"
+                 Dense="true"
+                 FixedHeader="true"
+                 Height="calc(100vh - 280px)"
+                 RowClick="@OnRowClick"
+                 RowStyleFunc="@RowStyleFunc">
+        <ToolBarContent>
+            <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                <MudTooltip Text="Add New Acquisition">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                   Color="Color.Primary" 
+                                   OnClick="@AddNewAcquisition" />
+                </MudTooltip>
+                <MudTooltip Text="Edit Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                   Color="Color.Default"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@EditSelectedAcquisition" />
+                </MudTooltip>
+                <MudTooltip Text="Copy Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" 
+                                   Color="Color.Default"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@CopySelectedAcquisition" />
+                </MudTooltip>
+                <MudTooltip Text="Delete Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@DeleteSelectedAcquisition" />
+                </MudTooltip>
+                
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                
+                <MudTooltip Text="Generate Barcode Cover Sheet">
+                    <MudIconButton Icon="@Icons.Material.Filled.QrCode" 
+                                   Color="Color.Default"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@GenerateBarcodeCoverSheet" />
+                </MudTooltip>
+                
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                
+                <MudTooltip Text="Export to Excel">
+                    <MudIconButton Icon="@Icons.Material.Filled.FileDownload" 
+                                   Color="Color.Success"
+                                   OnClick="@ExportToExcel" />
+                </MudTooltip>
+            </MudStack>
+            <MudSpacer />
+            <MudText Typo="Typo.caption" Class="mr-4">
+                Total: @_totalCount records
+            </MudText>
+        </ToolBarContent>
+        
+        <Columns>
+            @* Acq ID Column - Always visible *@
+            <PropertyColumn Property="x => x.AcquisitionID" Title="Acq ID" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 90px;">
+                <FooterTemplate>
+                    Count: @_totalCount
+                </FooterTemplate>
+            </PropertyColumn>
+            
+            @* Acquisition Number *@
+            <PropertyColumn Property="x => x.AcquisitionNumber" Title="Acq Number" 
+                            Hidden="@(!IsColumnVisible("AcquisitionNumber"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Buyer *@
+            <PropertyColumn Property="x => x.Buyer" Title="Buyer" 
+                            Hidden="@(!IsColumnVisible("Buyer"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 180px;" />
+            
+            @* Assignee *@
+            <PropertyColumn Property="x => x.Assignee" Title="Assignee" 
+                            Hidden="@(!IsColumnVisible("Assignee"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 150px;" />
+            
+            @* Folder Location *@
+            <PropertyColumn Property="x => x.FolderLocation" Title="Folder Location" 
+                            Hidden="@(!IsColumnVisible("FolderLocation"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 180px;" />
+            
+            @* Effective Date *@
+            <PropertyColumn Property="x => x.EffectiveDate" Title="Effective Date" 
+                            Hidden="@(!IsColumnVisible("EffectiveDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Buyer Effective Date *@
+            <PropertyColumn Property="x => x.BuyerEffectiveDate" Title="Buyer Eff. Date" 
+                            Hidden="@(!IsColumnVisible("BuyerEffectiveDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Due Date *@
+            <PropertyColumn Property="x => x.DueDate" Title="Due Date" 
+                            Hidden="@(!IsColumnVisible("DueDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Paid Date *@
+            <PropertyColumn Property="x => x.PaidDate" Title="Paid Date" 
+                            Hidden="@(!IsColumnVisible("PaidDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Total Bonus *@
+            <PropertyColumn Property="x => x.TotalBonus" Title="Total Bonus" 
+                            Hidden="@(!IsColumnVisible("TotalBonus"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 130px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Consideration Fee *@
+            <PropertyColumn Property="x => x.ConsiderationFee" Title="Consideration Fee" 
+                            Hidden="@(!IsColumnVisible("ConsiderationFee"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 130px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Total Bonus and Fee *@
+            <PropertyColumn Property="x => x.TotalBonusAndFee" Title="Total Bonus + Fee" 
+                            Hidden="@(!IsColumnVisible("TotalBonusAndFee"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 130px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Draft Fee *@
+            <PropertyColumn Property="x => x.DraftFee" Title="Draft Fee" 
+                            Hidden="@(!IsColumnVisible("DraftFee"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 120px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Draft/Check Number *@
+            <PropertyColumn Property="x => x.DraftCheckNumber" Title="Draft/Check #" 
+                            Hidden="@(!IsColumnVisible("DraftCheckNumber"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 130px;" />
+            
+            @* Total Gross Acres *@
+            <PropertyColumn Property="x => x.TotalGrossAcres" Title="Gross Acres" 
+                            Hidden="@(!IsColumnVisible("TotalGrossAcres"))"
+                            Sortable="true" Filterable="true"
+                            Format="N4"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Total Net Acres *@
+            <PropertyColumn Property="x => x.TotalNetAcres" Title="Net Acres" 
+                            Hidden="@(!IsColumnVisible("TotalNetAcres"))"
+                            Sortable="true" Filterable="true"
+                            Format="N4"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Field Check *@
+            <PropertyColumn Property="x => x.FieldCheck" Title="Field Check" 
+                            Hidden="@(!IsColumnVisible("FieldCheck"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 100px;" />
+            
+            @* Closing Status *@
+            <PropertyColumn Property="x => x.ClosingStatus" Title="Closing Status" 
+                            Hidden="@(!IsColumnVisible("ClosingStatus"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 130px;" />
+            
+            @* SSR In Pay *@
+            <PropertyColumn Property="x => x.SsrInPay" Title="SSR In Pay" 
+                            Hidden="@(!IsColumnVisible("SsrInPay"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 90px;" />
+            
+            @* Title Opinion *@
+            <PropertyColumn Property="x => x.TitleOpinion" Title="Title Opinion" 
+                            Hidden="@(!IsColumnVisible("TitleOpinion"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 130px;" />
+            
+            @* Liens (Boolean) *@
+            <TemplateColumn Title="Liens" 
+                            Hidden="@(!IsColumnVisible("Liens"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 80px;">
+                <CellTemplate>
+                    @if (context.Item.Liens)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Warning" Size="Size.Small" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            
+            @* Lien Amount *@
+            <PropertyColumn Property="x => x.LienAmount" Title="Lien Amount" 
+                            Hidden="@(!IsColumnVisible("LienAmount"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 120px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Tax Amount Due *@
+            <PropertyColumn Property="x => x.TaxAmountDue" Title="Tax Due" 
+                            Hidden="@(!IsColumnVisible("TaxAmountDue"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Tax Amount Paid *@
+            <PropertyColumn Property="x => x.TaxAmountPaid" Title="Tax Paid" 
+                            Hidden="@(!IsColumnVisible("TaxAmountPaid"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Invoice Number *@
+            <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice #" 
+                            Hidden="@(!IsColumnVisible("InvoiceNumber"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 100px;" />
+            
+            @* Invoice Date *@
+            <PropertyColumn Property="x => x.InvoiceDate" Title="Invoice Date" 
+                            Hidden="@(!IsColumnVisible("InvoiceDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Invoice Due Date *@
+            <PropertyColumn Property="x => x.InvoiceDueDate" Title="Invoice Due" 
+                            Hidden="@(!IsColumnVisible("InvoiceDueDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Invoice Paid Date *@
+            <PropertyColumn Property="x => x.InvoicePaidDate" Title="Invoice Paid" 
+                            Hidden="@(!IsColumnVisible("InvoicePaidDate"))"
+                            Sortable="true" Filterable="true"
+                            Format="MM/dd/yyyy"
+                            HeaderStyle="width: 120px;" />
+            
+            @* Invoice Total *@
+            <PropertyColumn Property="x => x.InvoiceTotal" Title="Invoice Total" 
+                            Hidden="@(!IsColumnVisible("InvoiceTotal"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 120px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Commission *@
+            <PropertyColumn Property="x => x.Commission" Title="Commission" 
+                            Hidden="@(!IsColumnVisible("Commission"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Commission Percent *@
+            <PropertyColumn Property="x => x.CommissionPercent" Title="Comm %" 
+                            Hidden="@(!IsColumnVisible("CommissionPercent"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 80px;"
+                            CellStyle="text-align: right;" />
+            
+            @* Have Check Stub *@
+            <PropertyColumn Property="x => x.HaveCheckStub" Title="Check Stub" 
+                            Hidden="@(!IsColumnVisible("HaveCheckStub"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 100px;" />
+            
+            @* Check Stub Desc *@
+            <PropertyColumn Property="x => x.CheckStubDesc" Title="Stub Desc" 
+                            Hidden="@(!IsColumnVisible("CheckStubDesc"))"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 150px;" />
+            
+            @* Referral Fee *@
+            <PropertyColumn Property="x => x.ReferralFee" Title="Referral Fee" 
+                            Hidden="@(!IsColumnVisible("ReferralFee"))"
+                            Sortable="true" Filterable="true"
+                            Format="N2"
+                            HeaderStyle="width: 110px;"
+                            CellStyle="text-align: right;" />
+            
+        </Columns>
+        
+        <PagerContent>
+            <MudDataGridPager T="Acquisition" 
+                              PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
+        </PagerContent>
+        
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1">No acquisitions found matching the current filter.</MudText>
+        </NoRecordsContent>
+        
+        <LoadingContent>
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </LoadingContent>
+    </MudDataGrid>
+</MudPaper>
+
+@* Barcode Cover Sheet Dialog *@
+<MudDialog @bind-Visible="_showBarcodeDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Generate Acquisition Cover Sheet</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedItem != null)
+        {
+            <MudText>Generate barcode cover sheet for Acquisition ID: @_selectedItem.AcquisitionID</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">Buyer: @_selectedItem.Buyer</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showBarcodeDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@ConfirmGenerateBarcode">Generate</MudButton>
+    </DialogActions>
+</MudDialog>

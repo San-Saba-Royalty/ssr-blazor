@@ -1,0 +1,7 @@
+﻿services:
+  ssrblazor:
+    image: ssrblazor
+    build:
+      context: .
+      dockerfile: Dockerfile
+

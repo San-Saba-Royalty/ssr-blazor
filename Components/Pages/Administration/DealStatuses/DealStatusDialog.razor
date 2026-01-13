@@ -1,0 +1,42 @@
+@using MudBlazor
+@using SSRBusiness.Entities
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Model" @ref="_form">
+            <MudTextField @bind-Value="Model.StatusName" 
+                          Label="Status Name" 
+                          Required="true" 
+                          RequiredError="Status Name is required."
+                          MaxLength="50"
+                          Class="mb-4"/>
+            
+            <MudCheckBox @bind-Value="Model.DefaultStatus" Label="Default Status" Color="Color.Primary" />
+            <MudCheckBox @bind-Value="Model.ExcludeFromReports" Label="Exclude From Reports" Color="Color.Secondary" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public DealStatus Model { get; set; } = new();
+
+    private MudForm _form = null!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

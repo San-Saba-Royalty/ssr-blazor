@@ -1,0 +1,97 @@
+@using MudBlazor
+@page "/system/dealstatuses"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject DealStatusRepository Repository
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Deal Statuses</MudText>
+
+<MudDataGrid T="DealStatus" Items="@_items" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add Deal Status</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.StatusName" Title="Status Name" />
+        <PropertyColumn Property="x => x.DefaultStatus" Title="Default" />
+        <PropertyColumn Property="x => x.ExcludeFromReports" Title="Exc. from Reports" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<DealStatus> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _items = (await Repository.GetAllAsync()).ToList();
+    }
+
+    private async Task Add()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<DealStatusDialog>("Add Deal Status", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is DealStatus newItem)
+        {
+            await Repository.AddAsync(newItem);
+            await Repository.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Deal Status added", Severity.Success);
+        }
+    }
+
+    private async Task Edit(DealStatus item)
+    {
+        var clone = new DealStatus { DealStatusID = item.DealStatusID, StatusName = item.StatusName, DefaultStatus = item.DefaultStatus, ExcludeFromReports = item.ExcludeFromReports };
+        var parameters = new DialogParameters<DealStatusDialog> { { x => x.Model, clone } };
+        var dialog = await DialogService.ShowAsync<DealStatusDialog>("Edit Deal Status", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is DealStatus updatedModel)
+        {
+             item.StatusName = updatedModel.StatusName;
+             item.DefaultStatus = updatedModel.DefaultStatus;
+             item.ExcludeFromReports = updatedModel.ExcludeFromReports;
+             Repository.Update(item);
+             await Repository.SaveChangesAsync();
+             Snackbar.Add("Deal Status updated", Severity.Success);
+        }
+    }
+
+    private async Task Delete(DealStatus item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{item.StatusName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await Repository.DeleteWithGuardAsync(item.DealStatusID);
+                await LoadData();
+                Snackbar.Add("Deal Status deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,235 @@
+@page "/operators"
+@page "/operators/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+<PageTitle>Operators</PageTitle>
+
+@* Messages *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _displayMessage = null)">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+        @_errorMessage
+    </MudAlert>
+}
+
+<MudText Typo="Typo.h4" Class="mb-4">Operators</MudText>
+
+<MudDataGrid @ref="_dataGrid"
+             T="Operator"
+             ServerData="LoadServerData"
+             Dense="true"
+             Hover="true"
+             Striped="true"
+             Bordered="true"
+             FixedHeader="true"
+             Height="calc(100vh - 250px)"
+             RowClick="OnRowClick"
+             SelectedItem="_selectedItem"
+             RowStyleFunc="@RowStyleFunc"
+             Filterable="true"
+             FilterMode="DataGridFilterMode.ColumnFilterRow"
+             SortMode="SortMode.Multiple">
+    <ToolBarContent>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddNewOperator">
+                Add
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Secondary" 
+                       StartIcon="@Icons.Material.Filled.Edit"
+                       OnClick="EditSelectedOperator"
+                       Disabled="@(_selectedItem == null)">
+                Edit
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Error" 
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       OnClick="DeleteSelectedOperator"
+                       Disabled="@(_selectedItem == null)">
+                Delete
+            </MudButton>
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+            <MudButton Variant="Variant.Outlined" 
+                       StartIcon="@Icons.Material.Filled.Receipt"
+                       OnClick="OpenCheckStatement"
+                       Disabled="@(_selectedItem == null)">
+                Check Statement
+            </MudButton>
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+            <MudButton Variant="Variant.Outlined" 
+                       StartIcon="@Icons.Material.Filled.FileDownload"
+                       OnClick="ExportToExcel">
+                Export
+            </MudButton>
+        </MudStack>
+        <MudSpacer />
+        <MudText Typo="Typo.caption" Class="mr-4">
+            Total: @_totalCount operators
+        </MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.FilterAltOff" 
+                       OnClick="ResetFilters">
+                Reset Filters
+            </MudButton>
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.SortByAlpha" 
+                       OnClick="ResetSort">
+                Reset Sort
+            </MudButton>
+        </MudStack>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.OperatorID" Title="ID" Hidden="true" />
+        
+        <PropertyColumn Property="x => x.OperatorName" Title="Operator Name" Sortable="true" Filterable="true">
+            <FooterTemplate>
+                Count: @context.Items.Count()
+            </FooterTemplate>
+        </PropertyColumn>
+        
+        <PropertyColumn Property="x => x.ContactName" Title="Contact Name" Sortable="true" Filterable="true" />
+        
+        <TemplateColumn Title="Contact Email" Sortable="true" Filterable="true" SortBy="@(x => x.ContactEmail)">
+            <CellTemplate>
+                @if (!string.IsNullOrEmpty(context.Item.ContactEmail))
+                {
+                    <MudLink Href="@($"mailto:{context.Item.ContactEmail}")" Target="_blank">
+                        @context.Item.ContactEmail
+                    </MudLink>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        
+        <TemplateColumn Title="Contact Phone" Sortable="true" Filterable="true" SortBy="@(x => x.ContactPhone)">
+            <CellTemplate>
+                @if (!string.IsNullOrEmpty(context.Item.ContactPhone))
+                {
+                    <MudLink Href="@($"tel:{context.Item.ContactPhone}")">
+                        @context.Item.ContactPhone
+                    </MudLink>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        
+        <PropertyColumn Property="x => x.ContactFax" Title="Contact Fax" Sortable="true" Filterable="true" />
+        
+        <TemplateColumn Title="Address" Sortable="false" Filterable="false">
+            <CellTemplate>
+                @GetFullAddress(context.Item)
+            </CellTemplate>
+        </TemplateColumn>
+        
+        <PropertyColumn Property="x => x.City" Title="City" Sortable="true" Filterable="true" />
+        
+        <PropertyColumn Property="x => x.StateCode" Title="State" Sortable="true" Filterable="true" />
+        
+        <PropertyColumn Property="x => x.ZipCode" Title="Zip Code" Sortable="true" Filterable="true" />
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Operator" PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
+    </PagerContent>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body1">No operators found.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </LoadingContent>
+</MudDataGrid>
+
+@* Context Menu *@
+<MudMenu @ref="_contextMenu" PositionAtCursor="true" Dense="true">
+    <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="AddNewOperator">Add</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="EditSelectedOperator">Edit</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="DeleteSelectedOperator">Delete</MudMenuItem>
+    <MudDivider />
+    <MudMenuItem Icon="@Icons.Material.Filled.Receipt" OnClick="OpenCheckStatement">Check Statement Cover Sheet</MudMenuItem>
+</MudMenu>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this operator?</MudText>
+        @if (_selectedItem != null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>@_selectedItem.OperatorName</strong>
+            </MudText>
+        }
+        @if (_hasAssociatedAcquisitions)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-3">
+                This operator has associated acquisitions. Deleting it may affect those records.
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Check Statement Cover Sheet Dialog *@
+<MudDialog @bind-Visible="_showCheckStatementDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
+            Check Statement Cover Sheet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedItem != null)
+        {
+            <MudText Class="mb-4">
+                Generate check statement cover sheet for: <strong>@_selectedItem.OperatorName</strong>
+            </MudText>
+            
+            @if (_isGeneratingCheckStatement)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+                <MudText Align="Align.Center">Generating document...</MudText>
+            }
+            else if (!string.IsNullOrEmpty(_checkStatementUrl))
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-4">
+                    Document generated successfully!
+                </MudAlert>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Download"
+                           OnClick="DownloadCheckStatement"
+                           FullWidth="true">
+                    Download Cover Sheet
+                </MudButton>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCheckStatementDialog">Close</MudButton>
+        @if (string.IsNullOrEmpty(_checkStatementUrl) && !_isGeneratingCheckStatement)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="GenerateCheckStatement">
+                Generate
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>

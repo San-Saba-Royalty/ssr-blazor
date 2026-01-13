@@ -1,0 +1,574 @@
+@using MudBlazor
+@rendermode InteractiveServer
+
+<MudToolBar Dense="true" Class="pa-0 flex-grow-1">
+            
+            @* File Menu *@
+            <MudMenu Label="File" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                
+                @* New Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="New" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mr-3" />
+                                <span>New</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_ACQUISITION"))">
+                                <div class="menu-item-content"><span>Acquisition</span><span class="shortcut">Alt+A</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_BUYER"))">
+                                <div class="menu-item-content"><span>Buyer</span><span class="shortcut">Alt+B</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_COUNTY"))">
+                                <div class="menu-item-content"><span>County</span><span class="shortcut">Alt+C</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_OPERATOR"))">
+                                <div class="menu-item-content"><span>Operator</span><span class="shortcut">Alt+O</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_APPRAISALGROUP"))">
+                                <div class="menu-item-content"><span>Appraisal Group</span><span class="shortcut">Alt+G</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_LETTERAGREEMENT"))">
+                                <div class="menu-item-content"><span>Letter Agreement</span><span class="shortcut">Alt+L</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_NEW_REFERRER"))">
+                                <div class="menu-item-content"><span>Referrer</span><span class="shortcut">Alt+R</span></div>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                @* Display Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="Display" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="mr-3" />
+                                <span>Display</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_ACQUISITIONS"))">
+                                <div class="menu-item-content"><span>Acquisitions</span><span class="shortcut">Alt+A</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_BUYERS"))">
+                                <div class="menu-item-content"><span>Buyers</span><span class="shortcut">Alt+B</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_COUNTIES"))">
+                                <div class="menu-item-content"><span>Counties</span><span class="shortcut">Alt+C</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_OPERATORS"))">
+                                <div class="menu-item-content"><span>Operators</span><span class="shortcut">Alt+O</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_APPRAISALGROUPS"))">
+                                <div class="menu-item-content"><span>Appraisal Groups</span><span class="shortcut">Alt+G</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_LETTERAGREEMENTS"))">
+                                <div class="menu-item-content"><span>Letter Agreements</span><span class="shortcut">Alt+L</span></div>
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_DISPLAY_REFERRERS"))">
+                                <div class="menu-item-content"><span>Referrers</span><span class="shortcut">Alt+R</span></div>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                <MudDivider />
+                
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_SAVE"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" Class="mr-3" />
+                        <span>Save</span>
+                        <span class="shortcut">Alt+S</span>
+                    </div>
+                </MudMenuItem>
+
+                <MudDivider />
+
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_TAX_ROLL_SEARCH"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-3" />
+                        <span>Tax Roll Search</span>
+                    </div>
+                </MudMenuItem>
+
+                <MudDivider />
+
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_GOTO_LAST_ACQ"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-3" />
+                        <span>Goto Last Acquisition</span>
+                        <span class="shortcut">Alt+G</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_GOTO_LAST_LETTERAGREEMENT"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-3" />
+                        <span>Goto Last Letter Agreement</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_GOTO_LAST_DOC_SEARCH"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.FindInPage" Size="Size.Small" Class="mr-3" />
+                        <span>Goto Last Document Search</span>
+                    </div>
+                </MudMenuItem>
+
+                <MudDivider />
+
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_FILE_LOGOUT"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-3" />
+                        <span>Logout</span>
+                        <span class="shortcut">Alt+L</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Edit Menu *@
+            <MudMenu Label="Edit" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_EDIT_COPY"))">
+                    <MudNavLink Href="/appraisal-groups" Icon="@Icons.Material.Filled.Group">Appraisal Groups</MudNavLink>
+                <MudNavLink Href="/counties" Icon="@Icons.Material.Filled.Map">Counties</MudNavLink>
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" Class="mr-3" />
+                        <span>Copy</span>
+                        <span class="shortcut">Alt+C</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_EDIT_DELETE"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="mr-3" />
+                        <span>Delete</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Report Menu *@
+            <MudMenu Label="Report" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_DRAFTS_DUE"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="mr-3" />
+                        <span>Drafts Due</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_BUYER_INVOICES_DUE"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" Class="mr-3" />
+                        <span>Invoices Due</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_PURCHASES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Class="mr-3" />
+                        <span>Purchases</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_CURATIVE_REQUIREMENTS"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Healing" Size="Size.Small" Class="mr-3" />
+                        <span>Curative Requirements</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_LETTER_AGREEMENT_DEALS"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Handshake" Size="Size.Small" Class="mr-3" />
+                        <span>Letter Agreement Deals</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_REPORT_REFERRER_1099_SUMMARY"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Summarize" Size="Size.Small" Class="mr-3" />
+                        <span>Referrer 1099 Summary</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Documents Menu *@
+            <MudMenu Label="Documents" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_DOCUMENTS_TEMPLATES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-3" />
+                        <span>Templates</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_DOCUMENTS_BARCODE_ACQUISITION_DOCUMENT"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.QrCode" Size="Size.Small" Class="mr-3" />
+                        <span>Generate Acquisition Cover Sheet</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_DOCUMENTS_BARCODE_CHECK_STATEMENT"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.QrCode2" Size="Size.Small" Class="mr-3" />
+                        <span>Generate Check Statement Cover Sheet</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_DOCUMENTS_SEARCH"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-3" />
+                        <span>Search</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* View Menu *@
+            <MudMenu Label="View" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_VIEW_LIST"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.TableChart" Size="Size.Small" Class="mr-3" />
+                        <span>List</span>
+                        <span class="shortcut">Alt+L</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_VIEW_FORM"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-3" />
+                        <span>Form</span>
+                        <span class="shortcut">Alt+F</span>
+                    </div>
+                </MudMenuItem>
+                
+                <MudDivider />
+
+                @* Toolbar Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="Toolbar" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.ViewStream" Size="Size.Small" Class="mr-3" />
+                                <span>Toolbar</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_VIEW_TOOLBAR_SHOW_TOOLBAR"))">
+                                <div class="menu-item-content">
+                                    @if (ShowToolbar)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-3" />
+                                    }
+                                    else
+                                    {
+                                        <span class="mr-3" style="width: 20px; display: inline-block;"></span>
+                                    }
+                                    <span>Show Toolbar</span>
+                                    <span class="shortcut">Alt+S</span>
+                                </div>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                <MudDivider />
+
+                @* Apply Filter Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="Apply Filter" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="mr-3" />
+                                <span>Apply Filter</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_VIEW_APPLY_FILTER_ALL_RECORDS"))">
+                                <div class="menu-item-content">
+                                    @if (CurrentFilter == "All Records")
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-3" />
+                                    }
+                                    else
+                                    {
+                                        <span class="mr-3" style="width: 20px; display: inline-block;"></span>
+                                    }
+                                    <span>All Records</span>
+                                    <span class="shortcut">Alt+A</span>
+                                </div>
+                            </MudMenuItem>
+                            @if (AvailableFilters != null)
+                            {
+                                <MudDivider />
+                                @foreach (var filter in AvailableFilters)
+                                {
+                                    <MudMenuItem OnClick="@(() => OnApplyFilter(filter))">
+                                        <div class="menu-item-content">
+                                            @if (CurrentFilter == filter)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-3" />
+                                            }
+                                            else
+                                            {
+                                                <span class="mr-3" style="width: 20px; display: inline-block;"></span>
+                                            }
+                                            <span>@filter</span>
+                                        </div>
+                                    </MudMenuItem>
+                                }
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                @* Apply View Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="Apply View" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Small" Class="mr-3" />
+                                <span>Apply View</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_VIEW_APPLY_VIEW_ALL_FIELDS"))">
+                                <div class="menu-item-content">
+                                    @if (CurrentView == "All Fields")
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-3" />
+                                    }
+                                    else
+                                    {
+                                        <span class="mr-3" style="width: 20px; display: inline-block;"></span>
+                                    }
+                                    <span>All Fields</span>
+                                    <span class="shortcut">Alt+A</span>
+                                </div>
+                            </MudMenuItem>
+                            @if (AvailableViews != null)
+                            {
+                                <MudDivider />
+                                @foreach (var view in AvailableViews)
+                                {
+                                    <MudMenuItem OnClick="@(() => OnApplyView(view))">
+                                        <div class="menu-item-content">
+                                            @if (CurrentView == view)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-3" />
+                                            }
+                                            else
+                                            {
+                                                <span class="mr-3" style="width: 20px; display: inline-block;"></span>
+                                            }
+                                            <span>@view</span>
+                                        </div>
+                                    </MudMenuItem>
+                                }
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Tools Menu *@
+            <MudMenu Label="Tools" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_FILTERS"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="mr-3" />
+                        <span>Filters</span>
+                        <span class="shortcut">Alt+F</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_VIEWS"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Small" Class="mr-3" />
+                        <span>Views</span>
+                        <span class="shortcut">Alt+V</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_LIEN_TYPES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-3" />
+                        <span>Lien Types</span>
+                        <span class="shortcut">Alt+T</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_CURATIVE_TYPES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Healing" Size="Size.Small" Class="mr-3" />
+                        <span>Curative Types</span>
+                        <span class="shortcut">Alt+C</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_DEAL_STATUSES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Flag" Size="Size.Small" Class="mr-3" />
+                        <span>Deal Statuses</span>
+                        <span class="shortcut">Alt+D</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_LETTERAGREEMENT_DEAL_STATUSES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.FlagCircle" Size="Size.Small" Class="mr-3" />
+                        <span>Letter Agreement Deal Statuses</span>
+                        <span class="shortcut">Alt+L</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_TOOLS_FOLDER_LOCATIONS"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Class="mr-3" />
+                        <span>Folder Locations</span>
+                        <span class="shortcut">Alt+O</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Administration Menu *@
+            <MudMenu Label="Administration" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                     Class="menu-trigger" PopoverClass="native-menu-popup">
+                
+                @* New Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="New" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mr-3" />
+                                <span>New</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_ADMINISTRATION_NEW_USER"))">
+                                <div class="menu-item-content"><span>User</span><span class="shortcut">Alt+U</span></div>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                @* Display Submenu *@
+                <MudMenuItem>
+                    <MudMenu Label="Display" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft"
+                             ActivationEvent="MouseEvent.MouseOver" PopoverClass="native-menu-popup submenu">
+                        <ActivatorContent>
+                            <div class="menu-item-content submenu-trigger">
+                                <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="mr-3" />
+                                <span>Display</span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="submenu-arrow" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => OnMenuAction("MNU_ADMINISTRATION_DISPLAY_USERS"))">
+                                <div class="menu-item-content">
+                                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="mr-3" />
+                                    <span>Users</span>
+                                    <span class="shortcut">Alt+U</span>
+                                </div>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </MudMenuItem>
+
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_ADMINISTRATION_EDIT_USER"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Size="Size.Small" Class="mr-3" />
+                        <span>Edit User</span>
+                        <span class="shortcut">Alt+U</span>
+                    </div>
+                </MudMenuItem>
+
+                <MudMenuItem OnClick="@(() => OnMenuAction("MNU_ADMINISTRATION_ROLES"))">
+                    <div class="menu-item-content">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-3" />
+                        <span>Roles</span>
+                        <span class="shortcut">Alt+R</span>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+
+            @* Toolbar Separator and Buttons *@
+            @if (ShowToolbar)
+            {
+                <div class="toolbar-separator"></div>
+
+                <MudTooltip Text="New">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_NEW"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Save">
+                    <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_SAVE"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Print">
+                    <MudIconButton Icon="@Icons.Material.Filled.Print" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_PRINT"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Copy">
+                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_COPY"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Delete">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_DELETE"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="List View">
+                    <MudIconButton Icon="@Icons.Material.Filled.TableChart" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_LIST"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Form View">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_FORM"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Filters">
+                    <MudIconButton Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_FILTER"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Views">
+                    <MudIconButton Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_VIEW"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Goto Last Acquisition">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_BACK"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Goto Last Letter Agreement">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_BACK_LETTERAGREEMENT"))" Class="toolbar-button" />
+                </MudTooltip>
+                <div class="toolbar-item-separator"></div>
+                
+                <MudTooltip Text="Goto Last Document Search">
+                    <MudIconButton Icon="@Icons.Material.Filled.FindInPage" Size="Size.Small" 
+                                   OnClick="@(() => OnMenuAction("TLB_BACK_DOC_SEARCH"))" Class="toolbar-button" />
+                </MudTooltip>
+            }
+
+            <MudSpacer />
+</MudToolBar>

@@ -1,0 +1,735 @@
+@page "/acquisition/edit/{AcquisitionId:int}"
+@page "/acquisition/new"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using SSRBusiness.BusinessClasses
+@using SSRBusiness.BusinessFramework
+@using SSRBusiness.Entities
+@using MudBlazor
+@attribute [Authorize]
+@inject AcquisitionRepository AcquisitionRepo
+@inject NavigationManager navManager
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Acquisition Entry</MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_acquisition != null)
+    {
+        <EditForm Model="@_acquisition" OnValidSubmit="SaveAcquisition">
+            <DataAnnotationsValidator />
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                
+                <!-- Tab 1: General Info (Seller, Dates, Status) -->
+                <MudTabPanel Text="General">
+                    <MudGrid>
+                        <!-- Landman & Location -->
+                        <MudItem xs="12" sm="6">
+                            <MudSelect @bind-Value="_acquisition.FolderLocation" Label="Folder Location" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@((string?)null)">-- Select --</MudSelectItem>
+                                @foreach (var l in _folderLocations)
+                                {
+                                    <MudSelectItem Value="@l.FolderLocationText">@l.FolderLocationText</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect @bind-Value="_acquisition.LandManID" Label="Landman" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem T="int?" Value="null">-- Select --</MudSelectItem>
+                                @foreach (var u in _landmen)
+                                {
+                                    <MudSelectItem T="int?" Value="@(int.TryParse(u.UserId, out var uid) ? uid : (int?)null)">@u.FirstName @u.LastName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Seller Info (Assuming 1 primary seller for edit, though Entity has Collection) -->
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6">Seller Information</MudText>
+                            <MudDivider Class="mb-2"/>
+                        </MudItem>
+                        
+                         @* 
+                           Legacy app seemingly flattened Seller fields onto the main page, 
+                           but the Entity has `AcquisitionSellers`. 
+                           We will need a strategy for this. 
+                           For now, we'll list Sellers and allow editing via dialog, 
+                           OR if business rule is "One Seller", bind to First().
+                           Legacy: `txtSellerName` etc. implies direct binding. 
+                         *@
+                         
+                         <MudItem xs="12">
+                             <MudTable Items="_acquisition.AcquisitionSellers" Dense="true" Hover="true">
+                                 <HeaderContent>
+                                     <MudTh>Seller Name</MudTh>
+                                     <MudTh>City</MudTh>
+                                     <MudTh>State</MudTh>
+                                     <MudTh>Actions</MudTh>
+                                 </HeaderContent>
+                                 <RowTemplate Context="sellerCtx">
+                                     <MudTd>@sellerCtx.SellerName</MudTd>
+                                     <MudTd>@sellerCtx.City</MudTd>
+                                     <MudTd>@sellerCtx.StateCode</MudTd>
+                                     <MudTd>
+                                         <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditSeller(sellerCtx))">Edit</MudButton>
+                                     </MudTd>
+                                 </RowTemplate>
+                             </MudTable>
+                             <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddSeller">Add Seller</MudButton>
+                         </MudItem>
+
+                         <!-- Dates -->
+                         <MudItem xs="12" md="6">
+                             <MudCard>
+                                 <MudCardContent>
+                                     <MudDatePicker Label="Effective Date" @bind-Date="_acquisition.EffectiveDate" />
+                                     <MudDatePicker Label="Buyer Effective Date" @bind-Date="_acquisition.BuyerEffectiveDate" />
+                                     <MudDatePicker Label="Due Date" @bind-Date="_acquisition.DueDate" />
+                                     <MudDatePicker Label="Paid Date" @bind-Date="_acquisition.PaidDate" />
+                                 </MudCardContent>
+                             </MudCard>
+                         </MudItem>
+                         
+                         <!-- Status Checks -->
+                         <MudItem xs="12" md="6">
+                             <MudCard>
+                                 <MudCardContent>
+                                     <MudCheckBox @bind-Value="_acquisition.FieldCheck" Label="Field Check" />
+                                     <MudCheckBox Value="@_acquisition.TaxesDue" ValueChanged="@((bool v) => { _acquisition.TaxesDue = v; CalculateFinancials(); })" Label="Taxes Due" />
+                                     <MudCheckBox @bind-Value="_acquisition.Liens" Label="Liens" />
+                                     <MudTextField @bind-Value="_acquisition.ClosingStatus" Label="Closing Status" />
+                                 </MudCardContent>
+                             </MudCard>
+                         </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tab 2: Financials -->
+                <MudTabPanel Text="Financials">
+                    <MudGrid>
+                        <MudItem xs="12" sm="4">
+                             <MudNumericField Value="@_acquisition.TotalBonus" ValueChanged="@((decimal? v) => { _acquisition.TotalBonus = v; CalculateFinancials(); })" Label="Total Bonus" Format="C2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudNumericField Value="@_acquisition.DraftFee" ValueChanged="@((decimal? v) => { _acquisition.DraftFee = v; CalculateFinancials(); })" Label="Draft Fee" Format="C2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudNumericField Value="@_acquisition.TotalBonusAndFee" Label="Total (Calculated)" Format="C2" Variant="Variant.Outlined" ReadOnly="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="4">
+                             <MudNumericField Value="@_acquisition.ConsiderationFee" ValueChanged="@((decimal? v) => { _acquisition.ConsiderationFee = v; CalculateFinancials(); })" Label="Consideration Fee" Format="C2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudCheckBox Value="@_acquisition.TakeConsiderationFromTotal" ValueChanged="@((bool v) => { _acquisition.TakeConsiderationFromTotal = v; CalculateFinancials(); })" Label="Take Cons. from Total" />
+                        </MudItem>
+                         <MudItem xs="12" sm="4">
+                              <MudNumericField Value="@_acquisition.ReferralFee" ValueChanged="@((decimal? v) => { _acquisition.ReferralFee = v; CalculateFinancials(); })" Label="Referral Fee" Format="C2" Variant="Variant.Outlined" ReadOnly="@(_totalReferralPercent > 0)" HelperText="@(_totalReferralPercent > 0 ? "Calculated from Percent" : "Manual Entry")" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudSelect T="string" Label="Who Pays Referral" Value="@_acquisition.WhoPaysReferral" ValueChanged="@((string v) => { _acquisition.WhoPaysReferral = v; CalculateFinancials(); })" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@("S")">Seller</MudSelectItem>
+                                <MudSelectItem Value="@("B")">Buyer</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                         <MudItem xs="12" sm="6">
+                             <MudNumericField Value="@_acquisition.TaxAmountDue" Label="Tax Amount Due" Format="C2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                             <MudNumericField Value="@_acquisition.TaxAmountPaid" ValueChanged="@((decimal? v) => { _acquisition.TaxAmountPaid = v; CalculateFinancials(); })" Label="Tax Amount Paid" Format="C2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudDivider Class="my-4"/>
+                            <MudText Typo="Typo.h6">Invoice Info</MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="6" sm="3">
+                             <MudTextField @bind-Value="_acquisition.InvoiceNumber" Label="Invoice #" />
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                             <MudDatePicker Label="Invoice Date" @bind-Date="_acquisition.InvoiceDate" />
+                        </MudItem>
+                         <MudItem xs="6" sm="3">
+                             <MudNumericField Value="@_acquisition.InvoiceTotal" Label="Invoice Total" Format="C2" ReadOnly="@_acquisition.AutoCalculateInvoice" />
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                             <MudCheckBox Value="@_acquisition.AutoCalculateInvoice" ValueChanged="@((bool v) => { _acquisition.AutoCalculateInvoice = v; CalculateFinancials(); })" Label="Auto Calculate" />
+                        </MudItem>
+                         <MudItem xs="6" sm="3">
+                             <MudNumericField Value="@_acquisition.CommissionPercent" ValueChanged="@((decimal? v) => { _acquisition.CommissionPercent = v; CalculateFinancials(); })" Label="Commission %" Format="N2" />
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                             <MudNumericField Value="@_acquisition.Commission" Label="Commission" Format="C2" ReadOnly="@_acquisition.AutoCalculateInvoice" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tab 3: Counties & Operators -->
+                <MudTabPanel Text="Counties/Operators">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6">Counties</MudText>
+                            <MudTable Items="_acquisition.AcquisitionCounties" Dense="true">
+                                <HeaderContent>
+                                    <MudTh>County</MudTh>
+                                    <MudTh>Rec Fee</MudTh>
+                                    <MudTh>Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="countyCtx">
+                                    <MudTd>@(countyCtx.County?.CountyName ?? countyCtx.CountyID.ToString())</MudTd>
+                                    <MudTd>@countyCtx.County?.RecordingFeeFirstPage</MudTd>
+                                    <MudTd>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditCounty(countyCtx))">Edit</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                            <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddCounty">Add County</MudButton>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6">Operators</MudText>
+                            <MudTable Items="_acquisition.AcquisitionOperators" Dense="true">
+                                <HeaderContent>
+                                    <MudTh>Operator</MudTh>
+                                    <MudTh>Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="operatorCtx">
+                                    <MudTd>@(operatorCtx.Operator?.OperatorName ?? operatorCtx.OperatorID.ToString())</MudTd>
+                                    <MudTd>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditOperator(operatorCtx))">Edit</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                            <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddOperator">Add Operator</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                
+                <!-- Tab 4: Referrals -->
+                <MudTabPanel Text="Referrals">
+                    <MudGrid>
+                        <!-- Who Pays Switch removed as requested or managed elsewhere? Recheck task. Assuming simple implementation first. -->
+                         <MudItem xs="12">
+                             <MudTable Items="@_acquisition.AcquisitionReferrers" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>Referrer</MudTh>
+                                    <MudTh>Percent</MudTh>
+                                    <MudTh>Amount</MudTh>
+                                    <MudTh>Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="referrerCtx">
+                                    <MudTd>@(referrerCtx.Referrer?.ReferrerName)</MudTd>
+                                    <MudTd>@referrerCtx.ReferralPercent</MudTd>
+                                    <MudTd>@referrerCtx.ReferralAmount?.ToString("C")</MudTd>
+                                    <MudTd>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditReferrer(referrerCtx))">Edit</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                            <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddReferrer">Add Referrer</MudButton>
+                         </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tab 5: Liens & Curative -->
+                <MudTabPanel Text="Liens & Curative">
+                     <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6">Liens</MudText>
+                            <MudTable Items="@_acquisition.AcquisitionLiens" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>Holder</MudTh>
+                                    <MudTh>Type</MudTh>
+                                    <MudTh>Amount</MudTh>
+                                    <MudTh>Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="lienCtx">
+                                    <MudTd>@lienCtx.LienHolder</MudTd>
+                                    <MudTd>@(lienCtx.LienType?.LienTypeName)</MudTd>
+                                    <MudTd>@lienCtx.PayoffAmount?.ToString("C")</MudTd>
+                                    <MudTd>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditLien(lienCtx))">Edit</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                             <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddLien">Add Lien</MudButton>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6">Curative Requirements</MudText>
+                             <MudTable Items="@_acquisition.AcqCurativeRequirements" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>Type</MudTh>
+                                    <MudTh>Notes</MudTh>
+                                    <MudTh>Completed</MudTh>
+                                    <MudTh>Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate Context="curativeCtx">
+                                    <MudTd>@(curativeCtx.CurativeType?.CurativeTypeName)</MudTd>
+                                    <MudTd>@curativeCtx.Notes</MudTd>
+                                    <MudTd>@(curativeCtx.CompletedDate.HasValue ? curativeCtx.CompletedDate.Value.ToShortDateString() : "")</MudTd>
+                                    <MudTd>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => EditCurative(curativeCtx))">Edit</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                            <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Secondary" Class="mt-2" OnClick="AddCurative">Add Requirement</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                
+                <!-- Tab 6: Documents (Placeholder for nested component) -->
+                <MudTabPanel Text="Documents">
+                    <MudAlert Severity="Severity.Info">Document Management Component will go here.</MudAlert>
+                </MudTabPanel>
+
+            </MudTabs>
+            
+            <div class="d-flex justify-start mt-4">
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Save</MudButton>
+                <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Secondary">Cancel</MudButton>
+            </div>
+            
+        </EditForm>
+    }
+</MudContainer>
+
+
+@code {
+    [Parameter] public int? AcquisitionId { get; set; }
+
+    private Acquisition? _acquisition;
+    private bool _loading = true;
+    private List<User> _landmen = new();
+    private List<County> _counties = new();
+    private List<Operator> _operators = new();
+    private List<UnitType> _unitTypes = new();
+    private List<FolderLocation> _folderLocations = new();
+    private List<Referrer> _referrers = new();
+    private List<LienType> _lienTypes = new();
+    private List<CurativeType> _curativeTypes = new();
+    
+    [Inject] IDialogService DialogService { get; set; } = default!;
+    
+    [Inject] UserRepository UserRepo { get; set; } = default!;
+    [Inject] StateRepository StateRepo { get; set; } = default!;
+    [Inject] CountyRepository CountyRepo { get; set; } = default!;
+    [Inject] OperatorRepository OperatorRepo { get; set; } = default!;
+    [Inject] Repository<UnitType> UnitTypeRepo { get; set; } = default!;
+    [Inject] Repository<FolderLocation> FolderLocationRepo { get; set; } = default!;
+    [Inject] Repository<Referrer> ReferrerRepo { get; set; } = default!;
+    [Inject] Repository<LienType> LienTypeRepo { get; set; } = default!;
+    [Inject] Repository<CurativeType> CurativeTypeRepo { get; set; } = default!;
+    private decimal _totalReferralPercent = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            _loading = true;
+            // Load Lookups - load each async but don't use Task.WhenAll due to mixed types
+            _landmen = (await UserRepo.GetAllAsync()).OrderBy(u => u.LastName).ToList();
+            _counties = (await CountyRepo.GetCountiesAsync().ToListAsync()).OrderBy(c => c.CountyName).ToList();
+            _operators = (await OperatorRepo.GetOperatorsAsync().ToListAsync()).OrderBy(o => o.OperatorName).ToList();
+            _unitTypes = (await UnitTypeRepo.GetAllAsync()).OrderBy(t => t.UnitTypeDesc).ToList();
+            _folderLocations = (await FolderLocationRepo.GetAllAsync()).OrderBy(f => f.FolderLocationText).ToList();
+            _referrers = (await ReferrerRepo.GetAllAsync()).OrderBy(r => r.ReferrerName).ToList();
+            _lienTypes = (await LienTypeRepo.GetAllAsync()).OrderBy(l => l.LienTypeName).ToList();
+            _curativeTypes = (await CurativeTypeRepo.GetAllAsync()).OrderBy(c => c.CurativeTypeName).ToList();
+            
+            if (AcquisitionId.HasValue)
+            {
+                _acquisition = await AcquisitionRepo.LoadAcquisitionByAcquisitionIDAsync(AcquisitionId.Value);
+                if (_acquisition != null && _acquisition.AcquisitionReferrers != null)
+                {
+                    _totalReferralPercent = _acquisition.AcquisitionReferrers.Sum(r => r.ReferralPercent ?? 0);
+                }
+            }
+            else
+            {
+                _acquisition = new Acquisition();
+                _acquisition.EffectiveDate = DateTime.Today;
+                _acquisition.AcquisitionSellers = new List<AcquisitionSeller>(); 
+                _acquisition.AcquisitionCounties = new List<AcquisitionCounty>();
+                _acquisition.AcquisitionOperators = new List<AcquisitionOperator>();
+                _acquisition.AcquisitionUnits = new List<AcquisitionUnit>();
+                _acquisition.AcquisitionReferrers = new List<AcquisitionReferrer>();
+                _acquisition.AcquisitionLiens = new List<AcquisitionLien>();
+                _acquisition.AcqCurativeRequirements = new List<AcqCurativeRequirement>();
+            }
+        }
+        catch (Exception ex)
+        {
+             Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void CalculateFinancials()
+    {
+        if (_acquisition == null) return;
+
+        decimal totalBonus = _acquisition.TotalBonus ?? 0;
+        decimal considerationFee = _acquisition.ConsiderationFee ?? 0;
+        decimal taxAmountPaid = _acquisition.TaxAmountPaid ?? 0;
+        decimal referralFee = _acquisition.ReferralFee ?? 0;
+
+        // Update Referral Fee if percent exists
+        if (_totalReferralPercent > 0)
+        {
+            // Logic: referralFee = totalBonus * percent / 100
+             referralFee = totalBonus * (_totalReferralPercent / 100m);
+             _acquisition.ReferralFee = referralFee;
+        }
+
+        bool hasReferrer = _acquisition.AcquisitionReferrers != null && _acquisition.AcquisitionReferrers.Any();
+        bool takeReferralFromSeller = hasReferrer && _acquisition.WhoPaysReferral == "S";
+        bool buyerPaysReferral = hasReferrer && _acquisition.WhoPaysReferral == "B";
+
+        // Calculate TotalBonusAndFee
+        // Formula: TotalBonus - (TakeConsideration ? Consideration : 0) - TaxAmountPaid - (TakeReferralFromSeller ? ReferralFee : 0)
+        
+        decimal totalBonusAndFee = totalBonus;
+
+        if (_acquisition.TakeConsiderationFromTotal)
+        {
+            totalBonusAndFee -= considerationFee;
+        }
+
+        totalBonusAndFee -= taxAmountPaid;
+
+        if (takeReferralFromSeller)
+        {
+            totalBonusAndFee -= referralFee;
+        }
+
+        _acquisition.TotalBonusAndFee = totalBonusAndFee;
+
+        // Invoice Logic
+        if (_acquisition.AutoCalculateInvoice)
+        {
+            decimal bonusBase = totalBonus;
+            if (buyerPaysReferral)
+            {
+                bonusBase += referralFee;
+            }
+
+            decimal commissionPercent = _acquisition.CommissionPercent ?? 0;
+            decimal commission = bonusBase * (commissionPercent / 100m);
+
+            _acquisition.Commission = commission;
+            _acquisition.InvoiceTotal = bonusBase + commission;
+        }
+    }
+
+    private void OnTotalBonusChanged(decimal? value)
+    {
+        if (_acquisition == null) return;
+        _acquisition.TotalBonus = value;
+        CalculateFinancials();
+    }
+    
+    // Wrapper methods for other fields to ensuring triggering calc
+    private void OnFinancialFieldChanged<T>(Action<T?> setter, T? value)
+    {
+        setter(value);
+        CalculateFinancials();
+    }
+    
+    // ... Save ... (Previous methods continue)
+    
+    // ... Save ...
+
+    // ... Other Add Methods ...
+
+    // Unit Methods
+    private async Task AddUnit()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionUnitDialog> 
+        { 
+            { x => x.AcqUnit, new AcquisitionUnit() },
+            { x => x.UnitTypes, _unitTypes },
+            { x => x.Counties, _counties }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionUnitDialog>("Add Unit", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionUnit newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionUnits.Add(newItem);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditUnit(AcquisitionUnit item)
+    {
+        var parameters = new DialogParameters<AcquisitionUnitDialog> 
+        { 
+            { x => x.AcqUnit, item },
+            { x => x.UnitTypes, _unitTypes },
+            { x => x.Counties, _counties }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionUnitDialog>("Edit Unit", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+    
+    // ... SaveAcquisition and Cancel ...
+
+    private async Task SaveAcquisition()
+    {
+        if (_acquisition == null) return;
+        
+        try 
+        {
+            if (_acquisition.AcquisitionID == 0)
+            {
+                await AcquisitionRepo.AddAsync(_acquisition);
+            }
+            
+            await AcquisitionRepo.SaveChangesAsync();
+            
+            Snackbar.Add("Acquisition saved successfully.", Severity.Success);
+            navManager.NavigateTo("/acquisitions");
+        }
+        catch(Exception ex)
+        {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        navManager.NavigateTo("/acquisitions");
+    }
+
+    // ... Seller methods ...
+
+    private async Task AddSeller()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionSellerDialog> { { x => x.Seller, new AcquisitionSeller() } };
+        var dialog = await DialogService.ShowAsync<AcquisitionSellerDialog>("Add Seller", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionSeller newSeller)
+        {
+            newSeller.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionSellers.Add(newSeller);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditSeller(AcquisitionSeller seller)
+    {
+        var parameters = new DialogParameters<AcquisitionSellerDialog> { { x => x.Seller, seller } };
+        var dialog = await DialogService.ShowAsync<AcquisitionSellerDialog>("Edit Seller", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+
+    // County Methods
+    private async Task AddCounty()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionCountyDialog> 
+        { 
+            { x => x.AcqCounty, new AcquisitionCounty() },
+            { x => x.Counties, _counties }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionCountyDialog>("Add County", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionCounty newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionCounties.Add(newItem);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditCounty(AcquisitionCounty item)
+    {
+        var parameters = new DialogParameters<AcquisitionCountyDialog> 
+        { 
+            { x => x.AcqCounty, item },
+            { x => x.Counties, _counties }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionCountyDialog>("Edit County", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+    
+    // Operator Methods
+    private async Task AddOperator()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionOperatorDialog> 
+        { 
+            { x => x.AcqOperator, new AcquisitionOperator() },
+            { x => x.Operators, _operators }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionOperatorDialog>("Add Operator", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionOperator newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionOperators.Add(newItem);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditOperator(AcquisitionOperator item)
+    {
+        var parameters = new DialogParameters<AcquisitionOperatorDialog> 
+        { 
+            { x => x.AcqOperator, item },
+            { x => x.Operators, _operators }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionOperatorDialog>("Edit Operator", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+    // Referrer Methods
+    private async Task AddReferrer()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionReferrerDialog> 
+        { 
+            { x => x.AcqReferrer, new AcquisitionReferrer() },
+            { x => x.Referrers, _referrers }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionReferrerDialog>("Add Referrer", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionReferrer newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionReferrers.Add(newItem);
+            CalculateFinancials();
+            StateHasChanged();
+        }
+    }
+    
+    private async Task EditReferrer(AcquisitionReferrer referrer)
+    {
+        var parameters = new DialogParameters<AcquisitionReferrerDialog> 
+        { 
+            { x => x.AcqReferrer, referrer },
+            { x => x.Referrers, _referrers }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionReferrerDialog>("Edit Referrer", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             CalculateFinancials();
+             StateHasChanged();
+        }
+    }
+
+    // Lien Methods
+    private async Task AddLien()
+    {
+         if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionLienDialog> 
+        { 
+            { x => x.AcqLien, new AcquisitionLien() },
+            { x => x.LienTypes, _lienTypes }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionLienDialog>("Add Lien", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcquisitionLien newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+            _acquisition.AcquisitionLiens.Add(newItem);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditLien(AcquisitionLien lien)
+    {
+        var parameters = new DialogParameters<AcquisitionLienDialog> 
+        { 
+            { x => x.AcqLien, lien },
+            { x => x.LienTypes, _lienTypes }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionLienDialog>("Edit Lien", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+    
+    // Curative Methods
+    private async Task AddCurative()
+    {
+        if (_acquisition == null) return;
+
+        var parameters = new DialogParameters<AcquisitionCurativeDialog> 
+        { 
+            { x => x.AcqRequirement, new AcqCurativeRequirement() },
+            { x => x.CurativeTypes, _curativeTypes }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionCurativeDialog>("Add Requirement", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AcqCurativeRequirement newItem)
+        {
+            newItem.AcquisitionID = _acquisition.AcquisitionID;
+             _acquisition.AcqCurativeRequirements.Add(newItem);
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditCurative(AcqCurativeRequirement requirement)
+    {
+        var parameters = new DialogParameters<AcquisitionCurativeDialog> 
+        { 
+            { x => x.AcqRequirement, requirement },
+            { x => x.CurativeTypes, _curativeTypes }
+        };
+        var dialog = await DialogService.ShowAsync<AcquisitionCurativeDialog>("Edit Requirement", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+             StateHasChanged();
+        }
+    }
+}

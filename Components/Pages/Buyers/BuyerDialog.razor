@@ -1,0 +1,52 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Buyer" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Buyer.BuyerName" 
+                                Label="Buyer Name" 
+                                Required="true" 
+                                MaxLength="100"
+                                Immediate="true"/>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="Buyer.DefaultBuyer" Label="Default Buyer" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudNumericField @bind-Value="Buyer.DefaultCommission" 
+                                   Label="Default Commission %" 
+                                   Format="N2"
+                                   Min="0" Max="100"
+                                   Adornment="Adornment.End" 
+                                   AdornmentText="%" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Buyer Buyer { get; set; } = new();
+
+    private MudForm _form = default!;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Buyer));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

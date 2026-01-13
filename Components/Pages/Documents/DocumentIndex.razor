@@ -1,0 +1,230 @@
+@page "/documents"
+@page "/document/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+@inject DocumentService DocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Document Templates</PageTitle>
+
+@* Messages Section *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _displayMessage = string.Empty">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+        @_errorMessage
+    </MudAlert>
+}
+
+@* Header Section *@
+<MudPaper Elevation="1" Class="pa-3 mb-3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.h6">Documents</MudText>
+        
+        <MudDivider Vertical="true" FlexItem="true" />
+        
+        @* Document Type Filter *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.body2"><strong>Document Type:</strong></MudText>
+            <MudSelect T="string" 
+                       Value="@_selectedDocumentType"
+                       ValueChanged="@OnDocumentTypeChanged"
+                       Variant="Variant.Outlined"
+                       Dense="true"
+                       Style="min-width: 300px;">
+                @foreach (var docType in _documentTypes)
+                {
+                    <MudSelectItem Value="@docType.Code">@docType.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudStack>
+        
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@AddDocumentTemplate"
+                   Disabled="@(string.IsNullOrEmpty(_selectedDocumentType))">
+            Add Document Template
+        </MudButton>
+        
+        <MudSpacer />
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.FilterAltOff"
+                   OnClick="@ResetFilters">
+            Reset Filters
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@* Data Grid Section *@
+<MudPaper Elevation="1" Class="pa-0">
+    <MudDataGrid @ref="_dataGrid"
+                 T="DocumentTemplate"
+                 ServerData="LoadServerData"
+                 Filterable="true"
+                 FilterMode="DataGridFilterMode.ColumnFilterRow"
+                 SortMode="SortMode.Multiple"
+                 Groupable="false"
+                 Hover="true"
+                 Dense="true"
+                 FixedHeader="true"
+                 Height="calc(100vh - 280px)"
+                 RowClick="@OnRowClick"
+                 RowStyleFunc="@RowStyleFunc">
+        <ToolBarContent>
+            <MudStack Row="true" Spacing="1" Class="flex-wrap">
+                <MudTooltip Text="Add New Document Template">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                   Color="Color.Primary" 
+                                   OnClick="@AddDocumentTemplate" />
+                </MudTooltip>
+                <MudTooltip Text="Edit Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                   Color="Color.Default"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@EditSelectedDocument" />
+                </MudTooltip>
+                <MudTooltip Text="Delete Selected">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error"
+                                   Disabled="@(_selectedItem == null)"
+                                   OnClick="@DeleteSelectedDocument" />
+                </MudTooltip>
+                
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                
+                <MudTooltip Text="Export to Excel">
+                    <MudIconButton Icon="@Icons.Material.Filled.FileDownload" 
+                                   Color="Color.Success"
+                                   OnClick="@ExportToExcel" />
+                </MudTooltip>
+            </MudStack>
+            <MudSpacer />
+            <MudText Typo="Typo.caption" Class="mr-4">
+                Total: @_totalCount templates
+            </MudText>
+        </ToolBarContent>
+        
+        <Columns>
+            @* Document Template ID - Hidden *@
+            <PropertyColumn Property="x => x.DocumentTemplateID" Title="ID" 
+                            Hidden="true"
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 60px;" />
+            
+            @* Document Type Code *@
+            <PropertyColumn Property="x => x.DocumentTypeCode" Title="Type" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 150px;">
+                <FooterTemplate>
+                    Count: @_totalCount
+                </FooterTemplate>
+            </PropertyColumn>
+            
+            @* Document Template Description *@
+            <PropertyColumn Property="x => x.DocumentTemplateDesc" Title="Template Description" 
+                            Sortable="true" Filterable="true"
+                            HeaderStyle="width: 600px;" />
+            
+            @* Document Link *@
+            <TemplateColumn Title="Document" 
+                            Sortable="false" Filterable="false"
+                            HeaderStyle="width: 100px;">
+                <CellTemplate>
+                    @if (HasDocument(context.Item))
+                    {
+                        <MudTooltip Text="View Document">
+                            <MudIconButton Icon="@Icons.Material.Filled.Description" 
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => ViewDocument(context.Item))" />
+                        </MudTooltip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            
+            @* Edit Action *@
+            <TemplateColumn Title="" 
+                            Sortable="false" Filterable="false"
+                            HeaderStyle="width: 80px;">
+                <CellTemplate>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="@(() => EditDocument(context.Item))">
+                        Edit
+                    </MudButton>
+                </CellTemplate>
+            </TemplateColumn>
+            
+        </Columns>
+        
+        <PagerContent>
+            <MudDataGridPager T="DocumentTemplate" 
+                              PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
+        </PagerContent>
+        
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1">No document templates found.</MudText>
+        </NoRecordsContent>
+        
+        <LoadingContent>
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </LoadingContent>
+    </MudDataGrid>
+</MudPaper>
+
+@* Context Menu (using MudMenu with right-click) *@
+<MudMenu @ref="_contextMenu" PositionAtCursor="true" Disabled="@(_selectedItem == null)">
+    <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@AddDocumentTemplate">Add</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@EditSelectedDocument">Edit</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@DeleteSelectedDocument">Delete</MudMenuItem>
+</MudMenu>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedItem != null)
+        {
+            <MudText>Are you sure you want to delete this document template?</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>Type:</strong> @_selectedItem.DocumentTypeCode
+            </MudText>
+            <MudText Typo="Typo.body2">
+                <strong>Description:</strong> @_selectedItem.DocumentTemplateDesc
+            </MudText>
+            
+            @if (_hasAssociatedDocuments)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-3">
+                    This template has associated documents. Deleting it may affect existing records.
+                </MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>

@@ -1,0 +1,65 @@
+@page "/account/users"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Web
+@using SSRBlazor.Components
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@inject NavigationManager Navigation
+@inject UserRepository UserRepository
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">User Management</MudText>
+    
+    <MudTable Items="@_users" Hover="true" Striped="true" Loading="@_loading">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Users</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Link="/account/user-add">Add User</MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>User Name (ID)</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>Active</MudTh>
+            <MudTh>Last Login</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="User Name">@context.UserId</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="Active">
+                <MudIcon Icon="@(context.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)" 
+                         Color="@(context.IsActive ? Color.Success : Color.Error)" />
+            </MudTd>
+            <MudTd DataLabel="Last Login">@context.LastLogin</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => EditUser(context.UserId))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<User> _users = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _users = await UserRepository.GetUserListAsync();
+        _loading = false;
+    }
+
+    private void EditUser(string userId)
+    {
+        Navigation.NavigateTo($"/account/user-edit/{userId}");
+    }
+}

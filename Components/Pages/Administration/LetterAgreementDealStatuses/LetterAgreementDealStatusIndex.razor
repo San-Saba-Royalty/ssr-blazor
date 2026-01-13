@@ -1,0 +1,103 @@
+@using MudBlazor
+@page "/system/letteragreementdealstatuses"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject LetterAgreementDealStatusRepository Repository
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Letter Agreement Deal Statuses</MudText>
+
+<MudDataGrid T="LetterAgreementDealStatus" Items="@_items" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add Status</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.DealStatusCode" Title="Code" />
+        <PropertyColumn Property="x => x.StatusName" Title="Status Name" />
+        <PropertyColumn Property="x => x.DefaultStatus" Title="Default" />
+        <PropertyColumn Property="x => x.ExcludeFromReports" Title="Exc. from Reports" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<LetterAgreementDealStatus> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _items = (await Repository.GetAllAsync()).ToList();
+    }
+
+    private async Task Add()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters<LetterAgreementDealStatusDialog> { { x => x.IsEdit, false } };
+        var dialog = await DialogService.ShowAsync<LetterAgreementDealStatusDialog>("Add Deal Status", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is LetterAgreementDealStatus newItem)
+        {
+            await Repository.AddAsync(newItem);
+            await Repository.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Deal Status added", Severity.Success);
+        }
+    }
+
+    private async Task Edit(LetterAgreementDealStatus item)
+    {
+        var clone = new LetterAgreementDealStatus { DealStatusCode = item.DealStatusCode, StatusName = item.StatusName, DefaultStatus = item.DefaultStatus, ExcludeFromReports = item.ExcludeFromReports };
+        var parameters = new DialogParameters<LetterAgreementDealStatusDialog> 
+        { 
+            { x => x.Model, clone },
+            { x => x.IsEdit, true } 
+        };
+        var dialog = await DialogService.ShowAsync<LetterAgreementDealStatusDialog>("Edit Deal Status", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is LetterAgreementDealStatus updatedModel)
+        {
+             item.StatusName = updatedModel.StatusName;
+             item.DefaultStatus = updatedModel.DefaultStatus;
+             item.ExcludeFromReports = updatedModel.ExcludeFromReports;
+             Repository.Update(item);
+             await Repository.SaveChangesAsync();
+             Snackbar.Add("Deal Status updated", Severity.Success);
+        }
+    }
+
+    private async Task Delete(LetterAgreementDealStatus item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{item.StatusName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await Repository.DeleteWithGuardAsync(item.DealStatusCode);
+                await LoadData();
+                Snackbar.Add("Deal Status deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

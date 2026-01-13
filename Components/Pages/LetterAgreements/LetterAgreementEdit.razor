@@ -1,0 +1,565 @@
+@page "/letteragreement/new"
+@page "/letteragreement/edit/{Id:int}"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@attribute [Authorize]
+@inject LetterAgreementService LetterAgreementService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<PageTitle>@(Id.HasValue ? $"Letter Agreement #{Id}" : "New Letter Agreement")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Header with ID and status *@
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h5">
+                    @if (Id.HasValue)
+                    {
+                        <span>Letter Agreement #@Id</span>
+                    }
+                    else
+                    {
+                        <span>New Letter Agreement</span>
+                    }
+                </MudText>
+                @if (_letterAgreement?.AcquisitionID.HasValue == true)
+                {
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                        Linked to Acquisition #@_letterAgreement.AcquisitionID
+                    </MudChip>
+                }
+                @if (!string.IsNullOrEmpty(_currentStatus))
+                {
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">
+                        @_currentStatus
+                    </MudChip>
+                }
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                @if (!_isReadOnly)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SaveAsync"
+                               Disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Save
+                    </MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="@(() => NavigationManager.NavigateTo("/letteragreements"))">
+                    Back to List
+                </MudButton>
+            </MudStack>
+        </MudStack>
+        @if (_letterAgreement != null)
+        {
+            <MudText Typo="Typo.caption" Class="mt-2">
+                Created: @_letterAgreement.CreatedOn.ToString("MM/dd/yyyy") |
+                Last Updated: @_letterAgreement.LastUpdatedOn.ToString("MM/dd/yyyy hh:mm tt")
+            </MudText>
+        }
+    </MudPaper>
+
+    @* Status Messages *@
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" 
+                  CloseIconClicked="() => _errorMessage = string.Empty">
+            @_errorMessage
+        </MudAlert>
+    }
+
+    @if (_isLoading)
+    {
+        <MudPaper Class="pa-8" Elevation="1">
+            <MudStack AlignItems="AlignItems.Center">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText>Loading letter agreement...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else if (_letterAgreement != null || !Id.HasValue)
+    {
+        @* Main Tabbed Interface *@
+        <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            @* INFO TAB *@
+            <MudTabPanel Text="Info" Icon="@Icons.Material.Filled.Info">
+                <MudGrid Spacing="3">
+                    @* SELLER INFORMATION *@
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-2">Seller Information</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCheckBox @bind-Value="_seller.CompanyIndicator" 
+                                     Label="Buying from Company"
+                                     Disabled="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudTextField @bind-Value="_seller.SellerLastName" 
+                                      Label="Last Name / Company Suffix"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="6">
+                        <MudTextField @bind-Value="_seller.SellerName" 
+                                      Label="@(_seller.CompanyIndicator ? "Company Name" : "Full Name")"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_seller.AddressLine1" 
+                                      Label="Address Line 1"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_seller.AddressLine2" 
+                                      Label="Address Line 2"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_seller.City" 
+                                      Label="City"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudSelect @bind-Value="_seller.StateCode" 
+                                   Label="State"
+                                   Variant="Variant.Outlined"
+                                   Disabled="@_isReadOnly">
+                            <MudSelectItem Value="@((string?)null)">-- Select --</MudSelectItem>
+                            @foreach (var state in _states)
+                            {
+                                <MudSelectItem Value="@state.StateCode">@state.StateName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudTextField @bind-Value="_seller.ZipCode" 
+                                      Label="Zip Code"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_seller.ContactPhone" 
+                                      Label="Phone"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly"
+                                      InputType="InputType.Telephone" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_seller.ContactFax" 
+                                      Label="Fax"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_seller.ContactEmail" 
+                                      Label="Email"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="@_isReadOnly"
+                                      InputType="InputType.Email" />
+                    </MudItem>
+
+                    <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+
+                    @* DEAL DETAILS *@
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-2">Deal Details</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudDatePicker @bind-Date="_effectiveDate" 
+                                       Label="Effective Date"
+                                       Variant="Variant.Outlined"
+                                       ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudDatePicker @bind-Date="_receiptDate" 
+                                       Label="Receipt Date"
+                                       Variant="Variant.Outlined"
+                                       ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudNumericField @bind-Value="_bankingDays" 
+                                         Label="Closing Days"
+                                         Variant="Variant.Outlined"
+                                         ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudSelect @bind-Value="_landManId" 
+                                   Label="Land Man"
+                                   Variant="Variant.Outlined"
+                                   Disabled="@_isReadOnly">
+                            <MudSelectItem Value="@((int?)null)">-- Select --</MudSelectItem>
+                            @foreach (var landman in _landmen)
+                            {
+                                <MudSelectItem Value="@((int?)landman.UserID)">@landman.FullName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+
+                    @* FINANCIAL *@
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-2">Financial</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudNumericField @bind-Value="_totalBonus" 
+                                         Label="Total Bonus"
+                                         Variant="Variant.Outlined"
+                                         Format="N2"
+                                         Adornment="Adornment.Start"
+                                         AdornmentText="$"
+                                         ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudNumericField @bind-Value="_considerationFee" 
+                                         Label="Consideration Fee"
+                                         Variant="Variant.Outlined"
+                                         Format="N2"
+                                         Adornment="Adornment.Start"
+                                         AdornmentText="$"
+                                         ReadOnly="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudCheckBox @bind-Value="_takeConsiderationFromTotal" 
+                                     Label="Take Fee from Total"
+                                     Disabled="@_isReadOnly" />
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudNumericField Value="@CalculateTotalBonusAndFee()" 
+                                         Label="Total Bonus + Fee"
+                                         Variant="Variant.Outlined"
+                                         Format="N2"
+                                         Adornment="Adornment.Start"
+                                         AdornmentText="$"
+                                         ReadOnly="true" />
+                    </MudItem>
+
+                    @* REFERRER *@
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudText>Referrer: </MudText>
+                            @if (_referrer != null)
+                            {
+                                <MudLink OnClick="EditReferrer">@_referrerName</MudLink>
+                                <MudText Class="ml-2">
+                                    @if (_referrer.ReferralAmount.HasValue)
+                                    {
+                                        <span>$@_referrer.ReferralAmount.Value.ToString("N2")</span>
+                                    }
+                                    @if (_referrer.ReferralPercent.HasValue)
+                                    {
+                                        <span>(@_referrer.ReferralPercent.Value.ToString("N5")%)</span>
+                                    }
+                                </MudText>
+                            }
+                            else if (!_isReadOnly)
+                            {
+                                <MudLink OnClick="AddReferrer">Add Referral</MudLink>
+                            }
+                            else
+                            {
+                                <MudText>None</MudText>
+                            }
+                        </MudStack>
+                    </MudItem>
+                    @if (_referrer != null)
+                    {
+                        <MudItem xs="6" sm="3" md="2">
+                            <MudCheckBox @bind-Value="_takeReferralFromTotal" 
+                                         Label="Seller Pays Referral"
+                                         Disabled="@_isReadOnly" />
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+
+                    @* ACREAGE SUMMARY *@
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-2">Acreage Summary</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText>Total Gross Acres: <strong>@(_letterAgreement?.TotalGrossAcres?.ToString("N4") ?? "0")</strong></MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudText>Total Net Acres: <strong>@(_letterAgreement?.TotalNetAcres?.ToString("N4") ?? "0")</strong></MudText>
+                    </MudItem>
+
+                    @* DEAL STATUS *@
+                    <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-2">Deal Status</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText>Current Status: <strong>@(_currentStatus ?? "None")</strong></MudText>
+                    </MudItem>
+                    @if (!_isReadOnly)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudStack Row="true" Spacing="2">
+                                <MudSelect @bind-Value="_newStatusCode" 
+                                           Label="Apply New Status"
+                                           Variant="Variant.Outlined"
+                                           Dense="true">
+                                    <MudSelectItem Value="@((string?)null)">-- Select --</MudSelectItem>
+                                    @foreach (var status in _dealStatuses)
+                                    {
+                                        <MudSelectItem Value="@status.DealStatusCode">@status.StatusName</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Primary"
+                                           OnClick="ApplyStatus"
+                                           Disabled="@(string.IsNullOrEmpty(_newStatusCode))">
+                                    Apply
+                                </MudButton>
+                            </MudStack>
+                        </MudItem>
+                    }
+
+                    @* CONVERT TO ACQUISITION *@
+                    @if (!_isReadOnly && Id.HasValue && _letterAgreement?.AcquisitionID == null)
+                    {
+                        <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+                        <MudItem xs="12">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Secondary"
+                                       StartIcon="@Icons.Material.Filled.Transform"
+                                       OnClick="ConvertToAcquisition">
+                                Convert to Acquisition
+                            </MudButton>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudTabPanel>
+
+            @* DETAILS TAB *@
+            <MudTabPanel Text="@($"Details ({_unitCount + _countyCount + _operatorCount})")" 
+                         Icon="@Icons.Material.Filled.ListAlt">
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Units, Counties, and Operators associated with this letter agreement.
+                </MudText>
+                
+                @* Units Section *@
+                <MudExpansionPanels MultiExpansion="true" Class="mb-4">
+                    <MudExpansionPanel Text="@($"Units ({_unitCount})")" IsInitiallyExpanded="true">
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
+                            @if (!_isReadOnly)
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddUnit">
+                                    Add Unit
+                                </MudButton>
+                            }
+                        </MudStack>
+                        <MudDataGrid T="LetterAgreementUnit" 
+                                     Items="@_units" 
+                                     Dense="true" 
+                                     Hover="true"
+                                     RowsPerPage="10">
+                            <Columns>
+                                <PropertyColumn Property="x => x.LetterAgreementUnitID" Title="ID" />
+                                <TemplateColumn Title="Actions">
+                                    <CellTemplate>
+                                        <MudStack Row="true" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Size="Size.Small" 
+                                                           OnClick="@(() => EditUnit(context.Item))"
+                                                           Disabled="@_isReadOnly" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Error"
+                                                           OnClick="@(() => DeleteUnit(context.Item))"
+                                                           Disabled="@_isReadOnly" />
+                                        </MudStack>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="LetterAgreementUnit" />
+                            </PagerContent>
+                        </MudDataGrid>
+                    </MudExpansionPanel>
+
+                    @* Counties Section *@
+                    <MudExpansionPanel Text="@($"Counties ({_countyCount})")">
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
+                            @if (!_isReadOnly)
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddCounty">
+                                    Add County
+                                </MudButton>
+                            }
+                        </MudStack>
+                        <MudDataGrid T="LetterAgreementCounty" 
+                                     Items="@_counties" 
+                                     Dense="true" 
+                                     Hover="true"
+                                     RowsPerPage="10">
+                            <Columns>
+                                <TemplateColumn Title="County">
+                                    <CellTemplate>
+                                        @context.Item.County?.CountyName
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="Actions">
+                                    <CellTemplate>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Size="Size.Small" 
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteCounty(context.Item))"
+                                                       Disabled="@_isReadOnly" />
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudExpansionPanel>
+
+                    @* Operators Section *@
+                    <MudExpansionPanel Text="@($"Operators ({_operatorCount})")">
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
+                            @if (!_isReadOnly)
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddOperator">
+                                    Add Operator
+                                </MudButton>
+                            }
+                        </MudStack>
+                        <MudDataGrid T="LetterAgreementOperator" 
+                                     Items="@_operators" 
+                                     Dense="true" 
+                                     Hover="true"
+                                     RowsPerPage="10">
+                            <Columns>
+                                <TemplateColumn Title="Operator">
+                                    <CellTemplate>
+                                        @context.Item.Operator?.OperatorName
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="Actions">
+                                    <CellTemplate>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Size="Size.Small" 
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteOperator(context.Item))"
+                                                       Disabled="@_isReadOnly" />
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudTabPanel>
+
+            @* NOTES TAB *@
+            <MudTabPanel Text="@($"Notes ({_noteCount})")" Icon="@Icons.Material.Filled.Notes">
+                <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
+                    @if (!_isReadOnly)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="AddNote">
+                            Add Note
+                        </MudButton>
+                    }
+                </MudStack>
+                <MudDataGrid T="LetterAgreementNote" 
+                             Items="@_notes" 
+                             Dense="true" 
+                             Hover="true"
+                             RowsPerPage="10">
+                    <Columns>
+                        <PropertyColumn Property="x => x.NoteTypeCode" Title="Type" />
+                        <PropertyColumn Property="x => x.CreatedDateTime" Title="Created" Format="MM/dd/yyyy" />
+                        <TemplateColumn Title="Actions">
+                            <CellTemplate>
+                                <MudStack Row="true" Spacing="1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                   Size="Size.Small" 
+                                                   OnClick="@(() => EditNote(context.Item))"
+                                                   Disabled="@_isReadOnly" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                   Size="Size.Small" 
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteNote(context.Item))"
+                                                   Disabled="@_isReadOnly" />
+                                </MudStack>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="LetterAgreementNote" />
+                    </PagerContent>
+                </MudDataGrid>
+            </MudTabPanel>
+
+            @* DOCUMENTS TAB *@
+            <MudTabPanel Text="Documents" Icon="@Icons.Material.Filled.Folder">
+                <MudAlert Severity="Severity.Info">
+                    Document management will be available after DocuShare integration is complete.
+                </MudAlert>
+            </MudTabPanel>
+
+            @* AUDIT HISTORY TAB (Admin Only) *@
+            <AuthorizeView Roles="Administrator" Context="authContext">
+                <MudTabPanel Text="Audit History" Icon="@Icons.Material.Filled.History">
+                    <MudDataGrid T="LetterAgreementChange" 
+                                 Items="@_auditHistory" 
+                                 Dense="true" 
+                                 Hover="true"
+                                 RowsPerPage="25">
+                        <Columns>
+                            <PropertyColumn Property="x => x.ChangeDate" Title="Date" Format="MM/dd/yyyy hh:mm tt" />
+                            <TemplateColumn Title="User">
+                                <CellTemplate>
+                                    @($"{context.Item.User?.FirstName} {context.Item.User?.LastName}".Trim())
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <PropertyColumn Property="x => x.ChangeTypeCode" Title="Type" />
+                            <PropertyColumn Property="x => x.FieldName" Title="Field" />
+                            <PropertyColumn Property="x => x.OldValue" Title="Old Value" />
+                            <PropertyColumn Property="x => x.NewValue" Title="New Value" />
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="LetterAgreementChange" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </MudTabPanel>
+            </AuthorizeView>
+        </MudTabs>
+    }
+</MudContainer>

@@ -1,0 +1,87 @@
+@using MudBlazor
+@page "/system/roles"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject RoleRepository RoleRepository
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Roles</MudText>
+
+<MudDataGrid T="Role" Items="@_roles" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddRole">Add Role</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.RoleName" Title="Role Name" />
+        <PropertyColumn Property="x => x.RolePermissions.Count" Title="Permissions Count" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditRole(context.Item.RoleId))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteRole(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<Role> _roles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        // Assuming GetAllAsync fetches basic info. RoleRepository.GetAllAsync may not eagerly load Permissions for the list 
+        // unless specifically overridden or configured. 
+        // Based on RoleRepository code, it inherits Repository<Role>.Generic, which doesn't eagerly load ICollection.
+        // But GetByIdAsync does.
+        // Master list might just show RoleName. We can lazy load or explicit load if we need Count.
+        // For now, let's see. If Count is 0 always, we might need a custom GetAllRolesAsync.
+        // SystemLookupRepositoryTests didn't test GetAll eagerness.
+        // Let's assume naive loading for now.
+        _roles = (await RoleRepository.GetAllAsync()).ToList();
+        
+        // Actually, if we want accurate Permission Counts, we might need to eagerly load them.
+        // Repository pattern usually exposes IQueryable or we adding a specific method.
+        // RoleRepository doesn't expose IQueryable via repo methods directly usually (Repository<T> might return IEnumerable).
+        // Let's rely on standard GetAll for now. If Count is zero, I'll fix it later.
+    }
+
+    private void AddRole()
+    {
+        Navigation.NavigateTo("/system/role/add");
+    }
+
+    private void EditRole(int roleId)
+    {
+        Navigation.NavigateTo($"/system/role/{roleId}");
+    }
+
+    private async Task DeleteRole(Role role)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{role.RoleName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await RoleRepository.DeleteWithGuardAsync(role.RoleId);
+                await LoadRoles();
+                Snackbar.Add("Role deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

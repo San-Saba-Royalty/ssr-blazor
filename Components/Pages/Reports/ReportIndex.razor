@@ -1,0 +1,504 @@
+@page "/reports"
+@page "/reports/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Models
+
+<PageTitle>Reports</PageTitle>
+
+@* Messages *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _displayMessage = null)">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (_validationErrors.Any())
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _validationErrors.Clear())">
+        <MudText Typo="Typo.subtitle2">The following errors were found:</MudText>
+        <ul class="mb-0">
+            @foreach (var error in _validationErrors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </MudAlert>
+}
+
+@if (_selectedReport != null)
+{
+    <MudText Typo="Typo.h5" Class="mb-3">@_selectedReport.ReportName</MudText>
+}
+else
+{
+    <MudText Typo="Typo.h5" Class="mb-3">Reports</MudText>
+}
+
+@* Report Selection *@
+@if (_selectedReport == null)
+{
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">Select a Report</MudText>
+        
+        @foreach (var category in _reportsByCategory)
+        {
+            <MudText Typo="Typo.subtitle1" Color="Color.Primary" Class="mt-3 mb-2">@category.Key</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                @foreach (var report in category.Value)
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                               OnClick="@(() => SelectReport(report))"
+                               Class="mb-2">
+                        @report.ReportName
+                    </MudButton>
+                }
+            </MudStack>
+        }
+    </MudPaper>
+}
+else
+{
+    @* Back to Report Selection *@
+    <MudButton Variant="Variant.Text" 
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="ClearReportSelection"
+               Class="mb-3">
+        Back to Report List
+    </MudButton>
+
+    @* Selection Criteria Toggle *@
+    <MudButton Variant="Variant.Text"
+               StartIcon="@(_showSelectionCriteria ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+               OnClick="@(() => _showSelectionCriteria = !_showSelectionCriteria)"
+               Class="mb-3">
+        Selection Criteria
+    </MudButton>
+
+    <MudCollapse Expanded="_showSelectionCriteria">
+        @* Multi-Select List Filters *@
+        <MudGrid Class="mb-4">
+            @* County Filter *@
+            @if (_selectedReport.ShowCountyFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">County:</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            If nothing is selected, all items will be used.
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedCountyIds"
+                                   SelectedValuesChanged="OnCountySelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var county in _lookups.Counties)
+                            {
+                                <MudSelectItem T="int" Value="@county.Id">@county.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+            
+            @* Operator Filter *@
+            @if (_selectedReport.ShowOperatorFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">Operator:</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            If nothing is selected, all items will be used.
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedOperatorIds"
+                                   SelectedValuesChanged="OnOperatorSelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var op in _lookups.Operators)
+                            {
+                                <MudSelectItem T="int" Value="@op.Id">@op.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+            
+            @* Buyer Filter *@
+            @if (_selectedReport.ShowBuyerFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">Buyer:</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            If nothing is selected, all items will be used.
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedBuyerIds"
+                                   SelectedValuesChanged="OnBuyerSelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var buyer in _lookups.Buyers)
+                            {
+                                <MudSelectItem T="int" Value="@buyer.Id">@buyer.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+        
+        @* Second Row: Deal Status, Landman, Field Landman *@
+        <MudGrid Class="mb-4">
+            @* Deal Status Filter with Query Type *@
+            @if (_selectedReport.ShowDealStatusFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">Deal Status:</MudText>
+                        <MudSelect T="int" 
+                                   @bind-Value="_parameters.DealStatusQueryType"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Class="mb-2">
+                            @foreach (var qt in DealStatusQueryTypes.All)
+                            {
+                                <MudSelectItem T="int" Value="@qt.Value">@qt.Text</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedDealStatusIds"
+                                   SelectedValuesChanged="OnDealStatusSelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 180px; overflow-y: auto;">
+                            @foreach (var status in _lookups.DealStatuses)
+                            {
+                                <MudSelectItem T="int" Value="@status.Id">@status.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+            
+            @* Landman Filter *@
+            @if (_selectedReport.ShowLandmanFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">Landman:</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            If nothing is selected, all items will be used.
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedLandmanIds"
+                                   SelectedValuesChanged="OnLandmanSelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var landman in _lookups.Landmen)
+                            {
+                                <MudSelectItem T="int" Value="@landman.Id">@landman.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+            
+            @* Field Landman Filter *@
+            @if (_selectedReport.ShowFieldLandmanFilter)
+            {
+                <MudItem xs="12" md="4" lg="3">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">Field Landman:</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            If nothing is selected, all items will be used.
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Hold Ctrl to multi-select
+                        </MudText>
+                        <MudSelect T="int" 
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedFieldLandmanIds"
+                                   SelectedValuesChanged="OnFieldLandmanSelectionChanged"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   Style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var landman in _lookups.FieldLandmen)
+                            {
+                                <MudSelectItem T="int" Value="@landman.Id">@landman.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @* Date Range Filters *@
+        <MudPaper Outlined="true" Class="pa-3 mb-4">
+            <MudText Typo="Typo.subtitle1" Class="mb-3">Date Filters</MudText>
+            
+            @if (_selectedReport.ShowEffectiveDateFilter)
+            {
+                <DateRangeFilterRow Label="Effective Date" Filter="_parameters.EffectiveDate" />
+            }
+            
+            @if (_selectedReport.ShowBuyerEffectiveDateFilter)
+            {
+                <DateRangeFilterRow Label="Buyer Effective Date" Filter="_parameters.BuyerEffectiveDate" />
+            }
+            
+            @if (_selectedReport.ShowDueDateFilter)
+            {
+                <DateRangeFilterRow Label="Due Date" Filter="_parameters.DueDate" />
+            }
+            
+            @if (_selectedReport.ShowPaidDateFilter)
+            {
+                <DateRangeFilterRow Label="Paid Date" Filter="_parameters.PaidDate" />
+            }
+            
+            @if (_selectedReport.ShowTitleOpinionDateFilter)
+            {
+                <DateRangeFilterRow Label="Title Opinion Received Date" Filter="_parameters.TitleOpinionReceivedDate" />
+            }
+            
+            @if (_selectedReport.ShowClosingLetterDateFilter)
+            {
+                <DateRangeFilterRow Label="Closing Letter Date" Filter="_parameters.ClosingLetterDate" />
+            }
+            
+            @if (_selectedReport.ShowDeedDateFilter)
+            {
+                <DateRangeFilterRow Label="Deed Date" Filter="_parameters.DeedDate" />
+            }
+            
+            @if (_selectedReport.ShowInvoiceDateFilter)
+            {
+                <DateRangeFilterRow Label="Invoice Date" Filter="_parameters.InvoiceDate" />
+            }
+            
+            @if (_selectedReport.ShowInvoiceDueDateFilter)
+            {
+                <DateRangeFilterRow Label="Invoice Due Date" Filter="_parameters.InvoiceDueDate" />
+            }
+            
+            @if (_selectedReport.ShowInvoicePaidDateFilter)
+            {
+                <DateRangeFilterRow Label="Invoice Paid Date" Filter="_parameters.InvoicePaidDate" />
+            }
+        </MudPaper>
+        @if (_selectedReport.ShowInvoiceNumberFilter || _selectedReport.ShowReferralFilter || 
+             _selectedReport.ShowCurativeFilter || _selectedReport.ShowLienFilter || 
+             _selectedReport.ShowLetterAgreementFilter)
+        {
+            <MudPaper Outlined="true" Class="pa-3 mb-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">Additional Filters</MudText>
+                
+                <MudGrid>
+                    @if (_selectedReport.ShowInvoiceNumberFilter)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.body2">Invoice Number:</MudText>
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="_parameters.InvoiceNumber.IsTrue" 
+                                             Label="Is Empty" 
+                                             Dense="true" />
+                                <MudCheckBox @bind-Value="_parameters.InvoiceNumber.IsFalse" 
+                                             Label="Is Not Empty" 
+                                             Dense="true" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                    
+                    @if (_selectedReport.ShowReferralFilter)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.body2">Referral:</MudText>
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="_parameters.IsReferral.IsTrue" 
+                                             Label="Is Referral" 
+                                             Dense="true" />
+                                <MudCheckBox @bind-Value="_parameters.IsReferral.IsFalse" 
+                                             Label="Is Not Referral" 
+                                             Dense="true" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                    
+                    @if (_selectedReport.ShowCurativeFilter)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.body2">Curative Requirements:</MudText>
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="_parameters.HasCuratives.IsTrue" 
+                                             Label="Has req" 
+                                             Dense="true" />
+                                <MudCheckBox @bind-Value="_parameters.HasCuratives.IsFalse" 
+                                             Label="Has no req" 
+                                             Dense="true" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                    
+                    @if (_selectedReport.ShowLienFilter)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.body2">Liens:</MudText>
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="_parameters.HasLiens.IsTrue" 
+                                             Label="Has liens" 
+                                             Dense="true" />
+                                <MudCheckBox @bind-Value="_parameters.HasLiens.IsFalse" 
+                                             Label="Has no liens" 
+                                             Dense="true" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                    
+                    @if (_selectedReport.ShowLetterAgreementFilter)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.body2">Letter Agreement:</MudText>
+                            <MudStack Row="true">
+                                <MudCheckBox @bind-Value="_parameters.HasLetterAgreement.IsTrue" 
+                                             Label="Yes" 
+                                             Dense="true" />
+                                <MudCheckBox @bind-Value="_parameters.HasLetterAgreement.IsFalse" 
+                                             Label="No" 
+                                             Dense="true" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+    </MudCollapse>
+
+    @* Report Options *@
+    @if (_selectedReport.ShowSortByOption || _selectedReport.ShowSubtotalByOption || 
+         _selectedReport.ShowSummaryLevelOption || _selectedReport.ShowIncludeNewAcquisitionsOption ||
+         _selectedReport.ShowIncludeAmountPaidOption || _selectedReport.ShowIncludeNotesOption)
+    {
+        <MudPaper Outlined="true" Class="pa-3 mb-4">
+            <MudText Typo="Typo.subtitle1" Class="mb-3">Report Options</MudText>
+            
+            @if (_selectedReport.ShowSortByOption)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudText Style="width: 120px;">Sort By:</MudText>
+                    <MudRadioGroup @bind-Value="_parameters.SortBy">
+                        <MudRadio Value="@("DueDate")" Dense="true">Due Date</MudRadio>
+                        <MudRadio Value="@("Landman")" Dense="true">Landman</MudRadio>
+                    </MudRadioGroup>
+                </MudStack>
+            }
+            
+            @if (_selectedReport.ShowSubtotalByOption)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudText Style="width: 120px;">Sub-Total By:</MudText>
+                    <MudRadioGroup @bind-Value="_parameters.SubtotalBy">
+                        @foreach (var option in SubtotalOptions.All)
+                        {
+                            <MudRadio Value="@option.Value" Dense="true">@option.Text</MudRadio>
+                        }
+                    </MudRadioGroup>
+                </MudStack>
+            }
+            
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="4">
+                @if (_selectedReport.ShowSummaryLevelOption)
+                {
+                    <MudCheckBox @bind-Value="_parameters.SummaryLevelOnly" 
+                                 Label="Summary Level Only" />
+                }
+                
+                @if (_selectedReport.ShowIncludeNewAcquisitionsOption)
+                {
+                    <MudCheckBox @bind-Value="_parameters.IncludeNewAcquisitions" 
+                                 Label="Include New Acquisitions" />
+                }
+                
+                @if (_selectedReport.ShowIncludeAmountPaidOption)
+                {
+                    <MudCheckBox @bind-Value="_parameters.IncludeAmountPaidSellerSubtotal" 
+                                 Label="Include Amount Paid Seller SubTotals" />
+                }
+                
+                @if (_selectedReport.ShowIncludeNotesOption)
+                {
+                    <MudCheckBox @bind-Value="_parameters.IncludeNotes" 
+                                 Label="Include Notes" />
+                }
+            </MudStack>
+        </MudPaper>
+    }
+
+    @* Output and Generate *@
+    <MudPaper Outlined="true" Class="pa-3">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudSelect T="string" 
+                           @bind-Value="_parameters.OutputFormat"
+                           Label="Output"
+                           Variant="Variant.Outlined"
+                           Dense="true">
+                    @foreach (var format in ReportOutputFormats.All)
+                    {
+                        <MudSelectItem T="string" Value="@format.Value">@format.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudStack Row="true" Spacing="2" Class="mt-2">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               OnClick="GenerateReport"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               Disabled="_isGenerating">
+                        @if (_isGenerating)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Generating...</span>
+                        }
+                        else
+                        {
+                            <span>Generate Report</span>
+                        }
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               OnClick="ResetFilters">
+                        Reset Filters
+                    </MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}

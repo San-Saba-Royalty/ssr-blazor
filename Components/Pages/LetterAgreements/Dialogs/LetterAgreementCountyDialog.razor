@@ -1,0 +1,51 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_selectedCountyId" Label="County" Required="true">
+                    <MudSelectItem T="int" Value="0">-- Select --</MudSelectItem>
+                    @foreach (var county in _counties)
+                    {
+                        <MudSelectItem T="int" Value="@county.CountyID">@county.CountyName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Add County</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int UnitId { get; set; }
+
+    [Parameter]
+    public List<County> Counties { get; set; } = new();
+
+    private List<County> _counties = new();
+    private int _selectedCountyId;
+
+    protected override void OnInitialized()
+    {
+        _counties = Counties;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (_selectedCountyId <= 0)
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(_selectedCountyId));
+    }
+}

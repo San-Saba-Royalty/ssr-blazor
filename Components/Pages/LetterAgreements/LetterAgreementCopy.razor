@@ -1,0 +1,100 @@
+@page "/letteragreement/copy/{Id:int}"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@inject LetterAgreementService LetterAgreementService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Copy Letter Agreement</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">Copy Letter Agreement #@Id</MudText>
+
+        @if (_loading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (_source == null)
+        {
+            <MudAlert Severity="Severity.Error">Letter Agreement not found.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="mb-4">
+                This will create a copy of Letter Agreement #@Id including:
+            </MudText>
+            
+            <MudList T="string">
+                <MudListItem Icon="@Icons.Material.Filled.Check">Seller information</MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Check">Financial details (bonus, fees)</MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Check">Units and their details</MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Check">Counties and operators</MudListItem>
+                <MudListItem Icon="@Icons.Material.Filled.Check">Referrer information</MudListItem>
+            </MudList>
+            
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                The new Letter Agreement will NOT include the effective date or link to any acquisition.
+            </MudAlert>
+
+            <MudStack Row Class="mt-4">
+                <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CopyLetterAgreement" Disabled="@_processing">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Copy Letter Agreement
+                </MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private LetterAgreement? _source;
+    private bool _loading = true;
+    private bool _processing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _source = await LetterAgreementService.GetByIdWithDetailsAsync(Id);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo($"/letteragreement/edit/{Id}");
+    }
+
+    private async Task CopyLetterAgreement()
+    {
+        if (_source == null) return;
+
+        _processing = true;
+        try
+        {
+            var newId = await LetterAgreementService.CopyAsync(Id);
+            Snackbar.Add("Letter Agreement copied successfully.", Severity.Success);
+            NavigationManager.NavigateTo($"/letteragreement/edit/{newId}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error copying: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

@@ -1,0 +1,283 @@
+@page "/documents/search"
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Models
+@using SSRBlazor.Services
+@attribute [Authorize]
+@inject DocumentService DocumentService
+@inject AcquisitionService AcquisitionService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Document Search</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Document Search</MudText>
+
+    @* Search Panel *@
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_searchText" 
+                              Label="Search Text" 
+                              Placeholder="Enter at least 2 characters..."
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              OnKeyDown="@OnSearchKeyDown"
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudRadioGroup @bind-Value="_searchScope">
+                    <MudRadio Value="@("acquisitions")">Acquisitions</MudRadio>
+                    <MudRadio Value="@("checkstatements")">Check Statements</MudRadio>
+                </MudRadioGroup>
+            </MudItem>
+            <MudItem xs="12" md="3" Class="d-flex align-center gap-4">
+                @if (_searchScope == "acquisitions")
+                {
+                    <MudCheckBox @bind-Value="_showAcquisitionInfo" Label="Show Acquisition Details" />
+                }
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="PerformSearch"
+                           Disabled="@(_searchText?.Length < 2)">
+                    Search
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Status Messages *@
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <MudAlert Severity="@_statusSeverity" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="() => _statusMessage = string.Empty">
+            @_statusMessage
+        </MudAlert>
+    }
+
+    @* Search Results *@
+    @if (_isSearching)
+    {
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body1" Class="mt-2">Searching documents...</MudText>
+        </MudPaper>
+    }
+    else if (_searchResults != null && _searchResults.Any())
+    {
+        <MudPaper Class="pa-0" Elevation="1">
+            <MudDataGrid T="DocumentSearchResult" 
+                         Items="@_searchResults"
+                         Dense="true"
+                         Hover="true"
+                         RowsPerPage="25">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Search Results (@_searchResults.Count found)</MudText>
+                    <MudSpacer />
+                </ToolBarContent>
+                <Columns>
+                    @* Document Name with link *@
+                    <TemplateColumn Title="Document" Sortable="true">
+                        <CellTemplate>
+                            <MudLink Href="@GetDocumentUrl(context.Item)" Target="_blank">
+                                @context.Item.DisplayName
+                            </MudLink>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    @* Document Type *@
+                    <PropertyColumn Property="x => x.DocumentType" Title="Type" Sortable="true" />
+                    
+                    @* Created By *@
+                    <PropertyColumn Property="x => x.CreatedBy" Title="Created By" Sortable="true" />
+                    
+                    @* Creation Date *@
+                    <TemplateColumn Title="Created" Sortable="true">
+                        <CellTemplate>
+                            @if (context.Item.CreationDate.HasValue)
+                            {
+                                @context.Item.CreationDate.Value.ToString("MM/dd/yyyy hh:mm tt")
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    @* Modified Date *@
+                    <TemplateColumn Title="Modified" Sortable="true">
+                        <CellTemplate>
+                            @if (context.Item.ModifiedDate.HasValue && 
+                                 context.Item.ModifiedDate != context.Item.CreationDate)
+                            {
+                                @context.Item.ModifiedDate.Value.ToString("MM/dd/yyyy hh:mm tt")
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    @* Go to Acquisition (only for acquisition documents) *@
+                    <TemplateColumn Title="Actions">
+                        <CellTemplate>
+                            @if (_searchScope == "acquisitions" && context.Item.AcquisitionId.HasValue)
+                            {
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.OpenInNew"
+                                           OnClick="@(() => NavigateToAcquisition(context.Item.AcquisitionId.Value))">
+                                    Go to Acquisition
+                                </MudButton>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                
+                @* Acquisition Info Row Detail (shown when expanded) *@
+                <ChildRowContent>
+                    @if (_showAcquisitionInfo && _searchScope == "acquisitions" && context.Item.AcquisitionDetails != null)
+                    {
+                        <MudCard Elevation="0" Class="ma-2 pa-2" Style="background-color: var(--mud-palette-background-gray);">
+                            <MudCardContent Class="pa-2">
+                                <MudGrid Spacing="1">
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudText Typo="Typo.caption">Acquisition ID</MudText>
+                                        <MudText>@context.Item.AcquisitionDetails.AcquisitionId</MudText>
+                                    </MudItem>
+                                    @if (!string.IsNullOrEmpty(context.Item.AcquisitionDetails.SellerName))
+                                    {
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudText Typo="Typo.caption">Seller</MudText>
+                                            <MudText>@context.Item.AcquisitionDetails.SellerName</MudText>
+                                        </MudItem>
+                                    }
+                                    @if (context.Item.AcquisitionDetails.EffectiveDate.HasValue)
+                                    {
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudText Typo="Typo.caption">Effective Date</MudText>
+                                            <MudText>@context.Item.AcquisitionDetails.EffectiveDate.Value.ToString("MM/dd/yyyy")</MudText>
+                                        </MudItem>
+                                    }
+                                    @if (!string.IsNullOrEmpty(context.Item.AcquisitionDetails.Counties))
+                                    {
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudText Typo="Typo.caption">Counties</MudText>
+                                            <MudText>@context.Item.AcquisitionDetails.Counties</MudText>
+                                        </MudItem>
+                                    }
+                                    @if (!string.IsNullOrEmpty(context.Item.AcquisitionDetails.Operators))
+                                    {
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudText Typo="Typo.caption">Operators</MudText>
+                                            <MudText>@context.Item.AcquisitionDetails.Operators</MudText>
+                                        </MudItem>
+                                    }
+                                    @if (!string.IsNullOrEmpty(context.Item.AcquisitionDetails.Buyers))
+                                    {
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudText Typo="Typo.caption">Buyers</MudText>
+                                            <MudText>@context.Item.AcquisitionDetails.Buyers</MudText>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                </ChildRowContent>
+                
+                <PagerContent>
+                    <MudDataGridPager T="DocumentSearchResult" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    }
+    else if (_hasSearched)
+    {
+        <MudAlert Severity="Severity.Info">
+            No documents found matching "@_searchText".
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private string _searchText = string.Empty;
+    private string _searchScope = "acquisitions";
+    private bool _showAcquisitionInfo = false;
+    private bool _isSearching = false;
+    private bool _hasSearched = false;
+    private string _statusMessage = string.Empty;
+    private Severity _statusSeverity = Severity.Info;
+    
+    private List<DocumentSearchResult>? _searchResults;
+    
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && _searchText?.Length >= 2)
+        {
+            await PerformSearch();
+        }
+    }
+    
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText) || _searchText.Length < 2)
+        {
+            _statusMessage = "Please enter at least 2 characters to search.";
+            _statusSeverity = Severity.Warning;
+            return;
+        }
+        
+        try
+        {
+            _isSearching = true;
+            _hasSearched = true;
+            _statusMessage = string.Empty;
+            StateHasChanged();
+            
+            // TODO: This will call DocumentService.SearchDocumentsAsync when implemented
+            // For now, using a placeholder that demonstrates the expected behavior
+            _searchResults = await DocumentService.SearchDocumentsAsync(
+                _searchText, 
+                _searchScope == "acquisitions",
+                _showAcquisitionInfo);
+            
+            if (_searchResults.Any())
+            {
+                _statusMessage = $"Found {_searchResults.Count} document(s).";
+                _statusSeverity = Severity.Success;
+            }
+        }
+        catch (NotImplementedException)
+        {
+            // Service method not implemented yet
+            _statusMessage = "Document search is not yet fully implemented. The search will work once DocuShare integration is complete.";
+            _statusSeverity = Severity.Warning;
+            _searchResults = new List<DocumentSearchResult>();
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error searching documents: {ex.Message}";
+            _statusSeverity = Severity.Error;
+            _searchResults = new List<DocumentSearchResult>();
+        }
+        finally
+        {
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+    
+    private string GetDocumentUrl(DocumentSearchResult result)
+    {
+        // TODO: Build actual DocuShare URL when integration is complete
+        // Format: {DocuShareAddress}dsweb/Get/{FileId}/{FileName}
+        if (!string.IsNullOrEmpty(result.FileId))
+        {
+            return $"#document/{result.FileId}";
+        }
+        return "#";
+    }
+    
+    private void NavigateToAcquisition(int acquisitionId)
+    {
+        NavigationManager.NavigateTo($"/acquisition/edit/{acquisitionId}");
+    }
+}

@@ -1,0 +1,255 @@
+@page "/county/edit/{CountyId:int}"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Components.Pages.Counties
+@inject CountyService CountyService
+@inject CountyContactService CountyContactService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit County</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h5">Edit County: @_county.CountyName (@_county.StateCode)</MudText>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowBack" Href="/counties">Back to List</MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Details">
+                <MudForm Model="@_county" @ref="_form">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                             <MudTextField @bind-Value="_county.CountyName" Label="County Name" Required="true" MaxLength="50" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                             <MudTextField @bind-Value="_county.StateCode" Label="State Code" Required="true" MaxLength="2" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_county.RecordingFeeFirstPage" 
+                                           Label="Recording Fee (1st Page)" 
+                                           Format="C2" />
+                        </MudItem>
+                         <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_county.RecordingFeeAdditionalPage" 
+                                           Label="Recording Fee (Addl Page)" 
+                                           Format="C2" />
+                        </MudItem>
+                         <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_county.CourtFee" 
+                                           Label="Court Fee" 
+                                           Format="C2" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.h6">Primary Contact Info</MudText>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_county.ContactName" Label="Contact Name" MaxLength="50" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_county.Attention" Label="Attention" MaxLength="50" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="4">
+                             <MudTextField @bind-Value="_county.ContactPhone" Label="Phone" MaxLength="24" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudTextField @bind-Value="_county.ContactFax" Label="Fax" MaxLength="24" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                             <MudTextField @bind-Value="_county.ContactEmail" Label="Email" MaxLength="50" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                             <MudTextField @bind-Value="_county.AddressLine1" Label="Address Line 1" MaxLength="100" />
+                        </MudItem>
+                        <MudItem xs="12">
+                             <MudTextField @bind-Value="_county.AddressLine2" Label="Address Line 2" MaxLength="100" />
+                        </MudItem>
+                         <MudItem xs="12">
+                             <MudTextField @bind-Value="_county.AddressLine3" Label="Address Line 3" MaxLength="100" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                             <MudTextField @bind-Value="_county.City" Label="City" MaxLength="50" />
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                             <MudTextField @bind-Value="_county.ZipCode" Label="Zip" MaxLength="10" />
+                        </MudItem>
+
+                        <MudItem xs="12" Class="d-flex justify-end mt-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCounty">Save Changes</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Contacts">
+                <MudTable Items="@_contacts" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">County Contacts</MudText>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddContact">Add Contact</MudButton>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Email</MudTh>
+                        <MudTh>Phone</MudTh>
+                        <MudTh>City</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Name">@context.ContactName</MudTd>
+                        <MudTd DataLabel="Email">@context.ContactEmail</MudTd>
+                        <MudTd DataLabel="Phone">@context.ContactPhone</MudTd>
+                        <MudTd DataLabel="City">@context.City</MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditContact(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteContact(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public int CountyId { get; set; }
+
+    private County _county = new();
+    private List<CountyContact> _contacts = new();
+    private bool _loading = true;
+    private MudForm _form = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try 
+        {
+            var county = await CountyService.GetByIdAsync(CountyId);
+            if (county == null)
+            {
+                Snackbar.Add("County not found", Severity.Error);
+                NavigationManager.NavigateTo("/counties");
+                return;
+            }
+            _county = county;
+            _contacts = await CountyContactService.GetByCountyIdAsync(CountyId);
+        }
+        catch (Exception ex)
+        {
+             Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveCounty()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            try
+            {
+                var result = await CountyService.UpdateAsync(_county);
+                if (result.Success)
+                    Snackbar.Add("County updated", Severity.Success);
+                else
+                    Snackbar.Add(result.Error, Severity.Error);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating county: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task AddContact()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<CountyContactDialog>("Add Contact", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newContact = (CountyContact)result.Data;
+            newContact.CountyID = CountyId; // Ensure link
+            try
+            {
+                await CountyContactService.AddAsync(newContact);
+                Snackbar.Add("Contact added", Severity.Success);
+                // Reload contacts
+                _contacts = await CountyContactService.GetByCountyIdAsync(CountyId);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error adding contact: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task EditContact(CountyContact contact)
+    {
+        var parameters = new DialogParameters { ["Contact"] = contact };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = DialogService.Show<CountyContactDialog>("Edit Contact", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var updatedContact = (CountyContact)result.Data;
+            try
+            {
+                await CountyContactService.UpdateAsync(updatedContact);
+                Snackbar.Add("Contact updated", Severity.Success);
+                 _contacts = await CountyContactService.GetByCountyIdAsync(CountyId);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating contact: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteContact(CountyContact contact)
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+           "Warning", 
+           $"Are you sure you want to delete contact '{contact.ContactName}'?", 
+           yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await CountyContactService.DeleteAsync(contact.CountyContactID);
+                Snackbar.Add("Contact deleted", Severity.Success);
+                _contacts.Remove(contact);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting contact: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,202 @@
+@page "/documents/templates"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@attribute [Authorize]
+@inject DocumentService DocumentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Document Templates</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Document Templates</MudText>
+
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="8">
+                <MudSelect T="string" Label="Document Type" 
+                           Value="@_selectedDocumentType"
+                           ValueChanged="@(async (string value) => { _selectedDocumentType = value; await LoadTemplates(); })"
+                           Variant="Variant.Outlined">
+                    @foreach (var docType in _documentTypes)
+                    {
+                        <MudSelectItem Value="@docType.Code">@docType.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="4" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Add" 
+                           OnClick="AddDocumentTemplate"
+                           Disabled="@string.IsNullOrEmpty(_selectedDocumentType)">
+                    Add Document Template
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (!string.IsNullOrEmpty(_selectedDocumentType))
+    {
+        <MudDataGrid T="DocumentTemplate" Items="@_templates" Filterable="true" SortMode="SortMode.Multiple" 
+                     QuickFilter="@_quickFilter" RowsPerPage="25">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Templates for @_selectedDocumentType</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.DocumentTypeCode" Title="Type" Sortable="true" Filterable="true" />
+                <PropertyColumn Property="x => x.DocumentTemplateDesc" Title="Template Description" Sortable="true" Filterable="true" />
+                <TemplateColumn Title="Document" Sortable="false">
+                    <CellTemplate>
+                        @if (!string.IsNullOrEmpty(context.Item.DSFileID))
+                        {
+                            <MudTooltip Text="@context.Item.DocumentTemplateLocation">
+                                <MudIconButton Icon="@Icons.Material.Filled.Description" 
+                                               Size="Size.Small" 
+                                               Color="Color.Primary"
+                                               Href="@GetDocumentUrl(context.Item)" 
+                                               Target="_blank" />
+                            </MudTooltip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn CellClass="d-flex justify-end">
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                       Size="Size.Small" 
+                                       OnClick="@(() => EditDocumentTemplate(context.Item))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Size="Size.Small" 
+                                       Color="Color.Error" 
+                                       OnClick="@(() => DeleteDocumentTemplate(context.Item))" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="DocumentTemplate" />
+            </PagerContent>
+        </MudDataGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info">Please select a document type to view templates.</MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private List<DocumentTypeItem> _documentTypes = new();
+    private List<DocumentTemplate> _templates = new();
+    private string _selectedDocumentType = string.Empty;
+    private string _searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentTypes();
+    }
+
+    private async Task LoadDocumentTypes()
+    {
+        try
+        {
+            _documentTypes = await DocumentService.GetDocumentTypesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading document types: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadTemplates()
+    {
+        if (string.IsNullOrEmpty(_selectedDocumentType))
+        {
+            _templates = new List<DocumentTemplate>();
+            return;
+        }
+
+        try
+        {
+            _templates = await DocumentService.GetAllAsync(t => t.DocumentTypeCode == _selectedDocumentType);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading templates: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Func<DocumentTemplate, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.DocumentTemplateDesc?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        if (x.DocumentTypeCode?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        return false;
+    };
+
+    private async Task OnDocumentTypeChanged()
+    {
+        await LoadTemplates();
+    }
+
+    private void AddDocumentTemplate()
+    {
+        NavigationManager.NavigateTo($"/documents/template/add?type={_selectedDocumentType}");
+    }
+
+    private void EditDocumentTemplate(DocumentTemplate template)
+    {
+        NavigationManager.NavigateTo($"/documents/template/edit/{template.DocumentTemplateID}");
+    }
+
+    private async Task DeleteDocumentTemplate(DocumentTemplate template)
+    {
+        // TODO: Check if documents exist for this template
+        // var hasDocuments = await DocumentService.HasAssociatedDocumentsAsync(template.DocumentTemplateID);
+        // if (hasDocuments)
+        // {
+        //     await DialogService.ShowMessageBox("Cannot Delete", "Documents have been created using this template and it cannot be deleted.");
+        //     return;
+        // }
+
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning",
+            $"Are you sure you want to delete '{template.DocumentTemplateDesc}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await DocumentService.DeleteAsync(template.DocumentTemplateID);
+                Snackbar.Add("Document template deleted", Severity.Success);
+                await LoadTemplates();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting template: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private string GetDocumentUrl(DocumentTemplate template)
+    {
+        // TODO: Implement DocuShare URL building or alternative document storage URL
+        // For now, return a placeholder
+        return $"#document/{template.DSFileID}";
+    }
+
+    // Watch for changes to selected document type
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadTemplates();
+    }
+}

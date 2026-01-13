@@ -1,0 +1,99 @@
+@page "/system/lientypes"
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor 
+@inject LienTypeRepository Repository
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5" Class="mb-4">Lien Types</MudText>
+
+<MudDataGrid T="LienType" Items="@_items" Filterable="true" Sortable="true">
+    <ToolBarContent>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add Lien Type</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.LienTypeName" Title="Lien Type Name" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<LienType> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _items = (await Repository.GetAllAsync()).ToList();
+    }
+
+    private async Task Add()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<LienTypeDialog>("Add Lien Type", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is LienType newItem)
+        {
+            await Repository.AddAsync(newItem);
+            await Repository.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Lien Type added", Severity.Success);
+        }
+    }
+
+    private async Task Edit(LienType item)
+    {
+        // simplistic clone for dialog isolation
+        var clone = new LienType { LienTypeID = item.LienTypeID, LienTypeName = item.LienTypeName };
+        
+        var parameters = new DialogParameters<LienTypeDialog> { { x => x.Model, clone } };
+        var dialog = await DialogService.ShowAsync<LienTypeDialog>("Edit Lien Type", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is LienType updatedModel)
+        {
+             item.LienTypeName = updatedModel.LienTypeName;
+             Repository.Update(item);
+             await Repository.SaveChangesAsync();
+             // No need to reload full list if we just updated the item reference, but safe to do so
+             // await LoadData(); 
+             Snackbar.Add("Lien Type updated", Severity.Success);
+        }
+    }
+
+    private async Task Delete(LienType item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Confirmation", 
+            $"Are you sure you want to delete '{item.LienTypeName}'?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try 
+            {
+                await Repository.DeleteWithGuardAsync(item.LienTypeID);
+                // Remove from local list to avoid full reload
+                _items.Remove(item);
+                // Or reload
+                await LoadData();
+                Snackbar.Add("Lien Type deleted", Severity.Success);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+}

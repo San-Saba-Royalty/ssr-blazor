@@ -1,0 +1,314 @@
+@page "/acquisitions/{AcquisitionId:int}/documents"
+@page "/acquisitiondocuments/{AcquisitionId:int}"
+
+@using SSRBlazor.Models
+@using SSRBlazor.Services
+@using MudBlazor
+
+<PageTitle>Acquisition Documents</PageTitle>
+
+@* Tab Navigation *@
+<MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+    <MudTabPanel Text="Acquisition Information" OnClick="@(() => NavigateToTab("info"))" />
+    <MudTabPanel Text="Notes" OnClick="@(() => NavigateToTab("notes"))" />
+    <MudTabPanel Text="Documents" />
+    <MudTabPanel Text="Audit History" OnClick="@(() => NavigateToTab("audit"))" />
+</MudTabs>
+
+@* Messages *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _displayMessage = null)">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+        @_errorMessage
+    </MudAlert>
+}
+
+@* Generate Document Section *@
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+        Generate Document
+    </MudText>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudSelect T="string"
+                       Label="Document Type"
+                       @bind-Value="_selectedDocumentTypeCode"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Clearable="true">
+                @foreach (var docType in _documentTypes)
+                {
+                    <MudSelectItem Value="@docType.DocumentTypeCode">
+                        @docType.DocumentTypeDescription
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="int?"
+                       Label="Document"
+                       @bind-Value="_selectedDocumentTemplateId"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Disabled="@(string.IsNullOrEmpty(_selectedDocumentTypeCode))"
+                       Clearable="true">
+                @foreach (var template in _documentTemplates)
+                {
+                    <MudSelectItem Value="@((int?)template.DocumentTemplateID)">
+                        @template.DocumentName
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        @if (_showCountySelector)
+        {
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" 
+                           Label="County" 
+                           @bind-Value="_selectedCountyId"
+                           Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter"
+                           Clearable="true">
+                    @foreach (var county in _counties)
+                    {
+                        <MudSelectItem Value="@((int?)county.Id)">@county.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+
+        @if (_showOperatorSelector)
+        {
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" 
+                           Label="Operator" 
+                           @bind-Value="_selectedOperatorId"
+                           Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter"
+                           Clearable="true">
+                    @foreach (var op in _operators)
+                    {
+                        <MudSelectItem Value="@((int?)op.Id)">@op.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+
+        @if (_showCountySelector)
+        {
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int?" 
+                                 Label="Number of pages to record"
+                                 @bind-Value="_numberOfPagesToRecord"
+                                 Variant="Variant.Outlined"
+                                 Min="1"
+                                 HelperText="Used for calculating court recording fee" />
+            </MudItem>
+        }
+
+        @* Custom Fields *@
+        @if (_customFields.Any())
+        {
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Custom Fields</MudText>
+                <MudTable Items="_customFields" Dense="true" Hover="true" Bordered="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Tag</MudTh>
+                        <MudTh>Replacement Value</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.TagName</MudTd>
+                        <MudTd>
+                            <MudTextField T="string" 
+                                          @bind-Value="context.Value" 
+                                          Variant="Variant.Outlined" 
+                                          Margin="Margin.Dense" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudItem>
+        }
+
+        <MudItem xs="12">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="GenerateDocument"
+                           Disabled="@(!CanGenerateDocument())">
+                    Generate Document
+                </MudButton>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Secondary" 
+                           StartIcon="@Icons.Material.Filled.Upload"
+                           OnClick="OpenUploadDialog">
+                    Upload New Document
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* Documents Grid *@
+<MudDataGrid @ref="_dataGrid"
+             T="AcquisitionDocumentModel"
+             Items="_documents"
+             Dense="true"
+             Hover="true"
+             Striped="true"
+             Bordered="true"
+             RowClick="OnRowClick"
+             SelectedItem="_selectedDocument"
+             SelectedItemChanged="OnSelectedItemChanged"
+             RowStyleFunc="@RowStyleFunc"
+             Loading="_isLoading"
+             Height="500px"
+             FixedHeader="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Documents</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.Refresh" 
+                   OnClick="RefreshDocuments">
+            Refresh
+        </MudButton>
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Error" 
+                   StartIcon="@Icons.Material.Filled.Delete" 
+                   OnClick="DeleteSelectedDocument"
+                   Disabled="@(_selectedDocument == null)">
+            Delete
+        </MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.Handle" Title="Handle" Hidden="true" />
+        <PropertyColumn Property="x => x.Owner" Title="Created By" />
+        <PropertyColumn Property="x => x.TimeCreated" Title="Created On" Format="MM/dd/yyyy hh:mm:ss tt" />
+        <PropertyColumn Property="x => x.ModifiedBy" Title="Modified By" />
+        <PropertyColumn Property="x => x.TimeModified" Title="Modified On" Format="MM/dd/yyyy hh:mm:ss tt" />
+        <PropertyColumn Property="x => x.Trace" Title="Type" />
+        
+        <TemplateColumn Title="Download" HeaderStyle="width:90px;">
+            <CellTemplate>
+                @if (!string.IsNullOrEmpty(context.Item.Url))
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Download" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   OnClick="@(() => DownloadDocument(context.Item))"
+                                   Title="Download" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        
+        <TemplateColumn Title="Upload" HeaderStyle="width:70px;">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Upload" 
+                               Color="Color.Secondary" 
+                               Size="Size.Small"
+                               OnClick="@(() => UploadToDocument(context.Item))"
+                               Title="Upload new version" />
+            </CellTemplate>
+        </TemplateColumn>
+        
+        <PropertyColumn Property="x => x.Summary" Title="Document" />
+        <PropertyColumn Property="x => x.Title" Title="File Name" />
+    </Columns>
+</MudDataGrid>
+
+@* Context Menu *@
+<MudMenu @ref="_contextMenu" PositionAtCursor="true" Dense="true">
+    <MudMenuItem Icon="@Icons.Material.Filled.Download" OnClick="DownloadSelectedDocument">
+        Download
+    </MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Upload" OnClick="@(() => UploadToDocument(_selectedDocument))">
+        Upload New Version
+    </MudMenuItem>
+    <MudDivider />
+    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="DeleteSelectedDocument">
+        Delete
+    </MudMenuItem>
+</MudMenu>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this document?</MudText>
+        @if (_selectedDocument != null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>@_selectedDocument.Summary</strong> - @_selectedDocument.Title
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Upload Dialog *@
+<MudDialog @bind-Visible="_showUploadDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Upload" Class="mr-2" />
+            Upload Document
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudFileUpload T="IBrowserFile" 
+                       Accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.png"
+                       FilesChanged="OnFileSelected"
+                       MaximumFileCount="1">
+            <ActivatorContent>
+                <MudPaper Height="100px" Outlined="true" Class="d-flex align-center justify-center cursor-pointer">
+                    <MudStack Row="false" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                        <MudText>Click to select file or drag and drop</MudText>
+                    </MudStack>
+                </MudPaper>
+            </ActivatorContent>
+        </MudFileUpload>
+        
+        @if (_uploadFile != null)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-3">
+                Selected: @_uploadFile.Name (@FormatFileSize(_uploadFile.Size))
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelUpload">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="ConfirmUpload"
+                   Disabled="@(_uploadFile == null || _isUploading)">
+            @if (_isUploading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Uploading...</span>
+            }
+            else
+            {
+                <span>Upload</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>

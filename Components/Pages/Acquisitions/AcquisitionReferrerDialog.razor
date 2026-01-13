@@ -1,0 +1,61 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@AcqReferrer" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12">
+                     <MudSelect T="int" Label="Referrer" @bind-Value="AcqReferrer.ReferrerID" Required="true" 
+                                Disabled="@(IsEditMode)">
+                        @foreach (var r in Referrers)
+                        {
+                            <MudSelectItem Value="@r.ReferrerID">@r.ReferrerName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6">
+                    <MudNumericField Label="Percent" @bind-Value="AcqReferrer.ReferralPercent" Format="N5" Min="0" Max="100" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField Label="Amount" @bind-Value="AcqReferrer.ReferralAmount" Format="C2" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionReferrer AcqReferrer { get; set; } = new();
+    [Parameter] public List<Referrer> Referrers { get; set; } = new();
+
+    private MudForm _form = default!;
+    
+    private bool IsEditMode => AcqReferrer.AcquisitionReferrerID != 0;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            // Populate nav prop
+            var selectedRef = Referrers.FirstOrDefault(r => r.ReferrerID == AcqReferrer.ReferrerID);
+            if (selectedRef != null)
+            {
+                AcqReferrer.Referrer = selectedRef;
+            }
+
+            MudDialog.Close(DialogResult.Ok(AcqReferrer));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

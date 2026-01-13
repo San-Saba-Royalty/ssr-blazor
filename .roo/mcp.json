@@ -1,0 +1,1 @@
+{"mcpServers":{"mssql":{"command":"uvx","args":["mssql_mcp_server"],"env":{"MSSQL_SERVER":"ssr.database.windows.net","MSSQL_DATABASE":"sansaba","MSSQL_USER":"babyice","MSSQL_PASSWORD":"J0n@th0nJ@m3s"},"alwaysAllow":["execute_sql"]}}}

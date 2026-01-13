@@ -1,0 +1,78 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_note.NoteTypeCode" Label="Note Type" Required="true">
+                    <MudSelectItem T="string?" Value="@((string?)null)">-- Select --</MudSelectItem>
+                    @foreach (var noteType in _noteTypes)
+                    {
+                        <MudSelectItem T="string?" Value="@noteType.NoteTypeCode">@noteType.NoteTypeDesc</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_note.NoteText" Label="Note" Lines="5" Required="true" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            @(IsEdit ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public LetterAgreementNote? Note { get; set; }
+
+    [Parameter]
+    public int LetterAgreementId { get; set; }
+
+    [Parameter]
+    public List<NoteType> NoteTypes { get; set; } = new();
+
+    private LetterAgreementNote _note = new();
+    private List<NoteType> _noteTypes = new();
+    private bool IsEdit => Note != null && Note.LetterAgreementNoteID > 0;
+
+    protected override void OnInitialized()
+    {
+        _noteTypes = NoteTypes;
+
+        if (Note != null)
+        {
+            _note = new LetterAgreementNote
+            {
+                LetterAgreementNoteID = Note.LetterAgreementNoteID,
+                LetterAgreementID = Note.LetterAgreementID,
+                NoteTypeCode = Note.NoteTypeCode,
+                NoteText = Note.NoteText
+            };
+        }
+        else
+        {
+            _note = new LetterAgreementNote
+            {
+                LetterAgreementID = LetterAgreementId
+            };
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_note.NoteTypeCode) || string.IsNullOrWhiteSpace(_note.NoteText))
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(_note));
+    }
+}

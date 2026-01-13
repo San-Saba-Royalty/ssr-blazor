@@ -1,0 +1,79 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@AcqCounty" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12">
+                     <MudSelect T="int" Label="County" @bind-Value="AcqCounty.CountyID" Required="true" 
+                                Disabled="@(IsEditMode)"> 
+                        @foreach (var c in Counties)
+                        {
+                            <MudSelectItem Value="@c.CountyID">@c.CountyName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="6">
+                    <MudDatePicker Label="Deed Sent Date" @bind-Date="AcqCounty.DeedSentDate" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker Label="Deed Returned Date" @bind-Date="AcqCounty.DeedReturnedDate" />
+                </MudItem>
+                
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="AcqCounty.RecordingBook" Label="Recording Book" MaxLength="50" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="AcqCounty.RecordingPage" Label="Recording Page" MaxLength="20" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionCounty AcqCounty { get; set; } = new();
+    [Parameter] public List<County> Counties { get; set; } = new();
+
+    private MudForm _form = default!;
+    
+    private bool IsEditMode => AcqCounty.AcquisitionCountyID != 0; 
+    // Note: If adding locally, ID might be 0 but we might want to lock CountyID if we passed an existing stub. 
+    // Ideally, if it's "Add", the Select is enabled. If "Edit", the Select is disabled or just shows the name.
+    // For now, assume if we pass a pre-filled object it's edit. 
+    // Actually, checking ID != 0 works for persisted items. Use another flag if needed.
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            if (AcqCounty.CountyID == 0)
+            {
+                // Should show validation error, but MudSelect Required=true handles it mostly.
+                 // Manual check if needed.
+            }
+            
+            // Populate the County navigation property for display in the grid
+            var selectedCounty = Counties.FirstOrDefault(c => c.CountyID == AcqCounty.CountyID);
+            if (selectedCounty != null)
+            {
+                AcqCounty.County = selectedCounty;
+            }
+
+            MudDialog.Close(DialogResult.Ok(AcqCounty));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

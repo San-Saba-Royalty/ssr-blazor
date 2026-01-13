@@ -1,0 +1,51 @@
+@using SSRBusiness.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_selectedOperatorId" Label="Operator" Required="true">
+                    <MudSelectItem T="int" Value="0">-- Select --</MudSelectItem>
+                    @foreach (var op in _operators)
+                    {
+                        <MudSelectItem T="int" Value="@op.OperatorID">@op.OperatorName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Add Operator</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int UnitCountyId { get; set; }
+
+    [Parameter]
+    public List<Operator> Operators { get; set; } = new();
+
+    private List<Operator> _operators = new();
+    private int _selectedOperatorId;
+
+    protected override void OnInitialized()
+    {
+        _operators = Operators;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (_selectedOperatorId <= 0)
+        {
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(_selectedOperatorId));
+    }
+}

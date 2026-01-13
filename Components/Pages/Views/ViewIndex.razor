@@ -1,0 +1,234 @@
+@page "/views"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using SSRBlazor.Models
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+@inject ViewService ViewService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using MudBlazor
+
+<PageTitle>Data Views - San Saba Royalty</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudStack Spacing="4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewQuilt" Class="mr-2 mb-n1" />
+                    Data Views
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="SetupNewView">New View</MudButton>
+            </MudStack>
+
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="int?" Label="View Name" Value="_selectedViewId" ValueChanged="OnViewChanged" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem T="int?" Value="null">-- Select a View --</MudSelectItem>
+                        @foreach (var view in _views)
+                        {
+                            <MudSelectItem T="int?" Value="@view.ViewID">@view.ViewName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    @if (_isAdding)
+                    {
+                        <MudTextField @bind-Value="_config.ViewName" Label="New View Name" Required="true" MaxLength="50" />
+                    }
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.h6">Display Fields for Acquisition List</MudText>
+            
+            <MudPaper Variant="Variant.Outlined" Class="pa-4" Style="max-height: 500px; overflow-y: auto;">
+                <MudGrid Spacing="1">
+                    @foreach (var field in _config.Fields.OrderBy(f => f.DisplayOrder))
+                    {
+                        <MudItem xs="12" sm="6" md="4" lg="3">
+                            <MudCheckBox T="bool" @bind-Value="field.IsSelected" Label="@field.DisplayName" Color="Color.Primary" Dense="true" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveViewAsync" Disabled="_processing">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save View
+                </MudButton>
+
+                @if (_selectedViewId.HasValue && !_isAdding)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="DeleteViewAsync" Disabled="_processing">Delete View</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="ApplyViewAsync" Disabled="_processing">Apply View</MudButton>
+                }
+
+                @if (_isAdding)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="CancelAdd">Cancel</MudButton>
+                }
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<View> _views = new();
+    private int? _selectedViewId;
+    private ViewConfiguration _config = new();
+    private bool _isAdding;
+    private bool _processing;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        await LoadViewsAsync();
+    }
+
+    private async Task LoadViewsAsync()
+    {
+        _views = await ViewService.GetAllViewsAsync();
+        if (_selectedViewId.HasValue)
+        {
+            await OnViewChanged(_selectedViewId);
+        }
+    }
+
+    private async Task OnViewChanged(int? viewId)
+    {
+        _selectedViewId = viewId;
+        _isAdding = false;
+        
+        if (viewId.HasValue)
+        {
+            var config = await ViewService.GetViewConfigurationAsync(viewId.Value);
+            if (config != null)
+            {
+                _config = config;
+            }
+        }
+        else
+        {
+            _config = new ViewConfiguration();
+        }
+    }
+
+    private async Task SetupNewView()
+    {
+        _isAdding = true;
+        _selectedViewId = null;
+        _config = await ViewService.GetNewViewConfigurationAsync();
+    }
+
+    private void CancelAdd()
+    {
+        _isAdding = false;
+        _config = new ViewConfiguration();
+    }
+
+    private async Task SaveViewAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_config.ViewName))
+        {
+            Snackbar.Add("View Name is required", Severity.Warning);
+            return;
+        }
+
+        _processing = true;
+        try
+        {
+            if (_isAdding)
+            {
+                var (success, created, error) = await ViewService.CreateAsync(_config);
+                if (success && created != null)
+                {
+                    Snackbar.Add($"View '{created.ViewName}' added.", Severity.Success);
+                    _selectedViewId = created.ViewID;
+                    await LoadViewsAsync();
+                }
+                else
+                {
+                    Snackbar.Add(error ?? "Error creating view", Severity.Error);
+                }
+            }
+            else
+            {
+                var (success, updated, error) = await ViewService.UpdateAsync(_config);
+                if (success && updated != null)
+                {
+                    Snackbar.Add($"View '{updated.ViewName}' updated.", Severity.Success);
+                    await LoadViewsAsync();
+                }
+                else
+                {
+                    Snackbar.Add(error ?? "Error updating view", Severity.Error);
+                }
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private async Task DeleteViewAsync()
+    {
+        if (!_selectedViewId.HasValue) return;
+
+        _processing = true;
+        try
+        {
+            var (success, error) = await ViewService.DeleteAsync(_selectedViewId.Value);
+            if (success)
+            {
+                Snackbar.Add("View deleted.", Severity.Success);
+                _selectedViewId = null;
+                await LoadViewsAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error deleting view", Severity.Error);
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private async Task ApplyViewAsync()
+    {
+        if (!_selectedViewId.HasValue || string.IsNullOrEmpty(_userId)) return;
+
+        _processing = true;
+        try
+        {
+            var (success, error) = await ViewService.ApplyViewToUserAsync(_userId, _selectedViewId.Value);
+            if (success)
+            {
+                Snackbar.Add("View applied successfully.", Severity.Success);
+                NavigationManager.NavigateTo("/acquisitions");
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error applying view", Severity.Error);
+            }
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

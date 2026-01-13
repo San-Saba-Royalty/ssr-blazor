@@ -1,0 +1,155 @@
+@page "/documents/template/add"
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize]
+@inject DocumentService DocumentService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Add Document Template</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Add Document Template</MudText>
+
+    <MudPaper Class="pa-4">
+        <EditForm Model="@_documentTemplate" OnValidSubmit="SaveTemplate">
+            <DataAnnotationsValidator />
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Label="Document Type" 
+                                  Value="@_documentTypeCode" 
+                                  ReadOnly="true" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Template Description" 
+                                  @bind-Value="_documentTemplate.DocumentTemplateDesc"
+                                  Required="true"
+                                  RequiredError="Template description is required"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".doc,.docx,.pdf">
+                        <ButtonTemplate>
+                            <MudButton HtmlTag="label"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                       for="@context">
+                                Select Template File
+                            </MudButton>
+                        </ButtonTemplate>
+                    </MudFileUpload>
+                    @if (_selectedFile != null)
+                    {
+                        <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.AttachFile" Class="mt-2">
+                            @_selectedFile.Name
+                        </MudChip>
+                    }
+                </MudItem>
+
+                <MudItem xs="12" Class="d-flex justify-end gap-2">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Default" 
+                               OnClick="Cancel">
+                        Cancel
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               ButtonType="ButtonType.Submit"
+                               Disabled="@(_selectedFile == null || string.IsNullOrWhiteSpace(_documentTemplate.DocumentTemplateDesc))">
+                        Save Template
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "type")]
+    public string? DocumentTypeCode { get; set; }
+
+    private DocumentTemplate _documentTemplate = new();
+    private string _documentTypeCode = string.Empty;
+    private IBrowserFile? _selectedFile;
+
+    protected override void OnInitialized()
+    {
+        _documentTypeCode = DocumentTypeCode ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(_documentTypeCode))
+        {
+            Snackbar.Add("Document type is required", Severity.Error);
+            NavigationManager.NavigateTo("/documents/templates");
+            return;
+        }
+
+        _documentTemplate.DocumentTypeCode = _documentTypeCode;
+    }
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+        _documentTemplate.DocumentTemplateLocation = file.Name;
+    }
+
+    private async Task SaveTemplate()
+    {
+        if (_selectedFile == null)
+        {
+            Snackbar.Add("Please select a template file", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            // Validate description doesn't already exist
+            var descriptionExists = await DocumentService.DoesTemplateDescriptionExistAsync(
+                _documentTypeCode, 
+                _documentTemplate.DocumentTemplateDesc);
+            
+            if (descriptionExists)
+            {
+                Snackbar.Add("This template description already exists for this document type", Severity.Error);
+                return;
+            }
+
+            // Validate file doesn't already exist
+            var fileExists = await DocumentService.DoesTemplateFileExistAsync(
+                _documentTypeCode, 
+                _selectedFile.Name);
+            
+            if (fileExists)
+            {
+                Snackbar.Add("A template with this file name already exists for this document type", Severity.Error);
+                return;
+            }
+
+            // TODO: Implement file upload to document storage (DocuShare, Azure Blob, etc.)
+            // For now, we'll just save the metadata
+            
+            // Set a placeholder DSFileID - this should be replaced with actual file storage logic
+            _documentTemplate.DSFileID = Guid.NewGuid().ToString();
+            
+            var templateId = await DocumentService.CreateAsync(_documentTemplate);
+            
+            Snackbar.Add("Document template created successfully", Severity.Success);
+            NavigationManager.NavigateTo("/documents/templates");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating template: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/documents/templates");
+    }
+}

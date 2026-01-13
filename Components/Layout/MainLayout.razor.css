@@ -1,0 +1,168 @@
+/* MainLayout Scoped Styles */
+
+/* Ensure page content has proper spacing below the menu */
+.page-content {
+    padding: 16px;
+    min-height: calc(100vh - 60px);
+}
+
+/* Menu item content layout */
+::deep .menu-item-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 200px;
+    gap: 8px;
+}
+
+::deep .menu-item-content .shortcut {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #666;
+    opacity: 0.7;
+}
+
+::deep .menu-item-content.submenu-trigger {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+::deep .menu-item-content .submenu-arrow {
+    margin-left: auto;
+}
+
+/* Toolbar styling */
+::deep .toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background-color: #e0e0e0;
+    margin: 0 8px;
+}
+
+::deep .toolbar-item-separator {
+    width: 1px;
+    height: 20px;
+    background-color: #e0e0e0;
+    margin: 0 4px;
+}
+
+::deep .toolbar-button {
+    margin: 0 2px;
+}
+
+/* App menu bar styling */
+::deep .app-menu-bar {
+    background-color: #f5f5f5 !important;
+    color: #333 !important;
+}
+
+::deep .app-menu-bar .mud-toolbar {
+    background-color: transparent !important;
+}
+
+/* Fix for MudMainContent to account for menu height */
+::deep .mud-main-content {
+    padding-top: 0 !important;
+}
+
+/* Drawer styling */
+::deep .mud-drawer {
+    border-right: 1px solid #e0e0e0 !important;
+}
+
+::deep .mud-drawer-mini {
+    width: 56px !important;
+}
+
+::deep .mud-drawer-mini.mud-drawer--open-mini-on-hover:hover {
+    width: 200px !important;
+}
+
+/* Nav menu styling */
+::deep .mud-nav-link {
+    font-size: 0.875rem !important;
+}
+
+/* Ensure proper z-index layering */
+::deep .mud-appbar {
+    z-index: 1100;
+}
+
+/* Menu popup styling */
+::deep .native-menu-popup {
+    background-color: #f5f5f5 !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    padding: 0 !important;
+}
+
+::deep .native-menu-popup.submenu {
+    background-color: #f0f0f0 !important;
+    border-left: 3px solid #007acc !important;
+}
+
+::deep .native-menu-popup .mud-list-item {
+    padding: 8px 16px !important;
+    background-color: transparent !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+::deep .native-menu-popup .mud-list-item:last-child {
+    border-bottom: none !important;
+}
+
+::deep .native-menu-popup .mud-list-item:hover {
+    background-color: #e8e8e8 !important;
+}
+
+::deep .native-menu-popup .mud-list-item .mud-list-item-text {
+    font-size: 0.875rem !important;
+    color: #333 !important;
+}
+
+/* Menu trigger styling */
+::deep .menu-trigger {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 8px 12px !important;
+}
+
+::deep .menu-trigger:hover {
+    background-color: #e8e8e8 !important;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    ::deep .mud-drawer {
+        border-right-color: #333 !important;
+    }
+
+    ::deep .native-menu-popup {
+        background-color: #2d2d2d !important;
+        border-color: #555 !important;
+    }
+
+    ::deep .native-menu-popup.submenu {
+        background-color: #333 !important;
+        border-left-color: #4fc3f7 !important;
+    }
+
+    ::deep .native-menu-popup .mud-list-item {
+        border-bottom-color: #555 !important;
+    }
+
+    ::deep .native-menu-popup .mud-list-item:hover {
+        background-color: #404040 !important;
+    }
+
+    ::deep .native-menu-popup .mud-list-item .mud-list-item-text {
+        color: #fff !important;
+    }
+
+    ::deep .menu-trigger:hover {
+        background-color: #404040 !important;
+    }
+}

@@ -1,0 +1,94 @@
+@page "/reports/drafts-due"
+@using SSRBusiness.BusinessClasses
+@using SSRBusiness.Entities
+@using Microsoft.EntityFrameworkCore
+@using SSRBusiness.Data
+@using MudBlazor
+@inject ReportService ReportService
+@inject SsrDbContext DbContext
+
+<MudText Typo="Typo.h4" Class="mb-4">Drafts Due Report (FastReport)</MudText>
+
+@if (_isLoading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    <MudText>Generating Report...</MudText>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">
+        Error generating report: @_error
+    </MudAlert>
+}
+else if (_pdfBase64 != null)
+{
+    <div style="height: 85vh; width: 100%;">
+        <iframe src="data:application/pdf;base64,@_pdfBase64" style="width:100%; height:100%; border:none;"></iframe>
+    </div>
+}
+else
+{
+    <MudAlert Severity="Severity.Info">No data found to generate report.</MudAlert>
+}
+
+@code {
+    private string? _pdfBase64;
+    private bool _isLoading = true;
+    private string? _error;
+
+    [SupplyParameterFromQuery(Name = "counties")]
+    public string? CountyIds { get; set; }
+
+    [SupplyParameterFromQuery(Name = "sortBy")]
+    public string? SortBy { get; set; } = "DueDate";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            
+            List<string> ids;
+
+            if (!string.IsNullOrEmpty(CountyIds))
+            {
+                var countyIdList = CountyIds.Split(',').Select(int.Parse).ToList();
+                
+                // Get Acquisition IDs based on County Filter
+                ids = await DbContext.AcquisitionCounties
+                    .Where(ac => countyIdList.Contains(ac.CountyID))
+                    .Select(ac => ac.AcquisitionID.ToString())
+                    .ToListAsync();
+            }
+            else
+            {
+                 // Default: Fetch sample Acquisiton IDs to test the report
+                // We select top 20 recent records
+                ids = await DbContext.Acquisitions
+                    .Where(a => a.DueDate != null)
+                    .OrderByDescending(a => a.DueDate)
+                    .Take(20)
+                    .Select(a => a.AcquisitionID.ToString())
+                    .ToListAsync();
+            }
+            
+            if (ids.Any())
+            {
+                 var pdfBytes = await ReportService.RunDraftsDueReportAsync(ids, SortBy ?? "DueDate");
+                 _pdfBase64 = Convert.ToBase64String(pdfBytes);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            if (ex.InnerException != null)
+            {
+                _error += $" -> {ex.InnerException.Message}";
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

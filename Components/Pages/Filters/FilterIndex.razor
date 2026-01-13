@@ -1,0 +1,213 @@
+@page "/filters"
+@page "/filters/index"
+
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+
+@inject FilterService FilterService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Data Filters</PageTitle>
+
+@* Messages Section *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _displayMessage = string.Empty">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="true" CloseIconClicked="() => _errorMessage = string.Empty">
+        @_errorMessage
+    </MudAlert>
+}
+
+@* Main Content *@
+<MudPaper Elevation="1" Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Data Filters</MudText>
+
+    @* Filter Selection / Name Section *@
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.body1" Style="min-width: 100px;">Filter Name:</MudText>
+                
+                @if (_isNewFilter)
+                {
+                    <MudTextField @bind-Value="_filterName"
+                                  Label="New Filter Name"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  MaxLength="50"
+                                  Style="max-width: 300px;"
+                                  Immediate="true" />
+                }
+                else
+                {
+                    <MudSelect T="int?"
+                               Value="_selectedFilterId"
+                               Label="Select Filter"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Style="max-width: 300px;"
+                               ValueChanged="OnFilterSelected">
+                        <MudSelectItem T="int?" Value="@((int?)null)">-- Select a Filter --</MudSelectItem>
+                        @foreach (var filter in _filters)
+                        {
+                            <MudSelectItem T="int?" Value="@filter.FilterID">@filter.FilterName</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudStack>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="8">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@NewFilter">
+                    New Filter
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="@SaveFilter"
+                           Disabled="@(!CanSave)">
+                    Save Filter
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="@Cancel">
+                    Cancel
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="@DeleteFilter"
+                           Disabled="@(_selectedFilterId == null || _isNewFilter)">
+                    Delete Filter
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="@ApplyFilter"
+                           Disabled="@(_selectedFilterId == null && !_isNewFilter)">
+                    Apply Filter
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-4" />
+
+    @* Filter Criteria Section *@
+    <MudText Typo="Typo.h6" Class="mb-3">Filter Criteria</MudText>
+
+    <MudTable Items="@_filterDetails" Dense="true" Hover="true" Bordered="true" Class="mb-4">
+        <HeaderContent>
+            <MudTh Style="width: 50px;">#</MudTh>
+            <MudTh Style="width: 250px;">Field</MudTh>
+            <MudTh Style="width: 200px;">Comparison</MudTh>
+            <MudTh>Compare To</MudTh>
+            <MudTh Style="width: 80px;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="#">@context.RowNumber</MudTd>
+            <MudTd DataLabel="Field">
+                <MudSelect T="string"
+                           Value="context.FieldName"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Dense="true"
+                           ValueChanged="@((string val) => OnFieldChanged(context, val))">
+                    <MudSelectItem T="string" Value="@string.Empty">-- Select Field --</MudSelectItem>
+                    @foreach (var field in _availableFields)
+                    {
+                        <MudSelectItem T="string" Value="@field.FieldName">@field.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudTd>
+            <MudTd DataLabel="Comparison">
+                <MudSelect T="string"
+                           @bind-Value="context.ComparisonType"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Dense="true"
+                           Disabled="@(string.IsNullOrEmpty(context.FieldName))">
+                    <MudSelectItem T="string" Value="@string.Empty">-- Select --</MudSelectItem>
+                    @foreach (var comp in GetComparisonTypesForField(context.FieldName))
+                    {
+                        <MudSelectItem T="string" Value="@comp.Value">@comp.Description</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudTd>
+            <MudTd DataLabel="Compare To">
+                @if (IsValueRequired(context.ComparisonType))
+                {
+                    <MudTextField T="string"
+                                  @bind-Value="context.CompareValue"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Disabled="@(string.IsNullOrEmpty(context.FieldName))"
+                                  Placeholder="Enter value..." />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-disabled">N/A</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               OnClick="@(() => RemoveRow(context))"
+                               Disabled="@(_filterDetails.Count <= 1)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <MudButton Variant="Variant.Text"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@AddRow"
+               Disabled="@(_filterDetails.Count >= 10)">
+        Add Criteria Row
+    </MudButton>
+
+    @if (_filterDetails.Count >= 10)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Warning" Class="ml-2">
+            Maximum 10 criteria rows allowed
+        </MudText>
+    }
+</MudPaper>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this filter?</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mt-2">
+            <strong>@_filterName</strong>
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>

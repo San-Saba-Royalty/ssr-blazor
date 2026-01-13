@@ -1,0 +1,65 @@
+@using MudBlazor
+@using MudBlazor
+@using SSRBusiness.Entities
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@AcqOperator" @ref="_form">
+            <MudGrid>
+                <MudItem xs="12">
+                     <MudSelect T="int" Label="Operator" @bind-Value="AcqOperator.OperatorID" Required="true" 
+                                Disabled="@(IsEditMode)">
+                        @foreach (var o in Operators)
+                        {
+                            <MudSelectItem Value="@o.OperatorID">@o.OperatorName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="4">
+                    <MudDatePicker Label="Notified (No Rec)" @bind-Date="AcqOperator.NotifiedDateNoRec" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudDatePicker Label="Notified (Rec)" @bind-Date="AcqOperator.NotifiedDateRec" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudDatePicker Label="DO Received" @bind-Date="AcqOperator.DOReceivedDate" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionOperator AcqOperator { get; set; } = new();
+    [Parameter] public List<Operator> Operators { get; set; } = new();
+
+    private MudForm _form = default!;
+    
+    private bool IsEditMode => AcqOperator.AcquisitionOperatorID != 0;
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            // Populate nav prop
+            var selectedOp = Operators.FirstOrDefault(o => o.OperatorID == AcqOperator.OperatorID);
+            if (selectedOp != null)
+            {
+                AcqOperator.Operator = selectedOp;
+            }
+
+            MudDialog.Close(DialogResult.Ok(AcqOperator));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

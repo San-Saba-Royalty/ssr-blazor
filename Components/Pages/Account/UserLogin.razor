@@ -1,0 +1,65 @@
+@page "/account/login"
+@using Microsoft.AspNetCore.Components.Web
+@using SSRBlazor.Components
+@using MudBlazor
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-16">
+    <MudCard Elevation="4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5" Align="Align.Center">Log On</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
+            }
+
+            <form method="post" action="/account/login">
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                
+                <div class="mb-4">
+                     <MudTextField Label="Email" 
+                                  Name="userName"
+                                  @bind-Value="UserName"
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Dense" 
+                                  Required="true" />
+                </div>
+
+                <div class="mb-4">
+                    <MudTextField Label="Password" 
+                                  Name="password"
+                                  @bind-Value="Password" 
+                                  InputType="InputType.Password" 
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Dense" 
+                                  Required="true" />
+                </div>
+
+                <MudButton ButtonType="ButtonType.Submit" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           FullWidth="true" 
+                           Class="mt-4">Login</MudButton>
+            </form>
+        </MudCardContent>
+        <MudCardActions Class="justify-center">
+             <MudLink Href="/account/register" Typo="Typo.body2">Register New User</MudLink>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? ErrorMessage { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private string UserName { get; set; } = "";
+    private string Password { get; set; } = "";
+}
