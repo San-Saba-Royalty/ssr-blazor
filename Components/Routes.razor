@@ -1,7 +1,10 @@
 ﻿@using MudBlazor
+@using SSRBlazor.Services
+@implements IDisposable
+@inject ThemeService ThemeService
 @rendermode InteractiveServer
 
-<MudThemeProvider />
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -16,3 +19,15 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1"/>
     </Found>
 </Router>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnChange -= StateHasChanged;
+    }
+}

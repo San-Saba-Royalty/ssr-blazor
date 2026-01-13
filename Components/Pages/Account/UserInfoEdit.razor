@@ -107,7 +107,8 @@
         {
             try 
             {
-                User.ModifiedDate = DateTime.UtcNow;
+                // User.ModifiedDate = DateTime.UtcNow; // Removed
+
                 UserRepository.Update(User);
                  
                 if (!string.IsNullOrWhiteSpace(_newPassword))

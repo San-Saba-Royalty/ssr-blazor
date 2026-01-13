@@ -74,7 +74,7 @@
 
 @code {
     [Parameter]
-    public string UserId { get; set; } = string.Empty;
+    public int UserId { get; set; }
 
     private User? User { get; set; }
     private string _newPassword = string.Empty;
@@ -93,7 +93,6 @@
         {
             try 
             {
-                User.ModifiedDate = DateTime.UtcNow;
                 UserRepository.Update(User);
                  
                 if (!string.IsNullOrWhiteSpace(_newPassword))

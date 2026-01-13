@@ -18,7 +18,8 @@ public static class DependencyInjection
         // Add memory cache
         services.AddMemoryCache();
 
-        services.AddDbContext<SsrDbContext>(options =>
+        // Register PooledDbContextFactory - provides both scoped contexts and factory
+        services.AddPooledDbContextFactory<SsrDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("SanSabaConnection"),
                 sqlOptions => sqlOptions.EnableRetryOnFailure(
@@ -68,6 +69,10 @@ public static class DependencyInjection
         services.AddScoped<RoleRepository>();
         services.AddScoped<PermissionRepository>();
 
+        // Register User and Referrer Form Repositories
+        services.AddScoped<UserRepository>();
+        services.AddScoped<ReferrerFormRepository>();
+
         // Register File Service
         services.AddSingleton<IFileService, FileService>();
 
@@ -108,6 +113,7 @@ public static class DependencyInjection
         services.AddScoped<ReportService>();
         services.AddScoped<SSRBlazor.Services.ReportService>();
         services.AddScoped<LookUpService>();
+        services.AddScoped<ThemeService>();
 
         return services;
     }

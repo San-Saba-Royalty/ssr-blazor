@@ -36,7 +36,12 @@ public class ViewService
     {
         try
         {
-            var user = await _userRepository.LoadUserByUserIdAsync(userId);
+            if (!int.TryParse(userId, out int userIdInt))
+            {
+                return (false, "Invalid User ID format.");
+            }
+
+            var user = await _userRepository.LoadUserByUserIdAsync(userIdInt);
             if (user == null)
             {
                 return (false, "User not found");

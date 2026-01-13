@@ -217,7 +217,9 @@
         _processing = true;
         try
         {
-            var (success, _, error) = await OperatorService.UpdateAsync(_operator!);
+            var op = _operator;
+            if (op == null) return;
+            var (success, _, error) = await OperatorService.UpdateAsync(op);
             if (success)
             {
                 Snackbar.Add("Operator updated successfully", Severity.Success);
@@ -235,9 +237,11 @@
 
     private async Task DeleteOperatorAsync()
     {
-        var parameters = new DialogParameters { ["ContentText"] = $"Are you sure you want to delete operator '{_operator!.OperatorName}'? This action cannot be undone." };
+        var op = _operator;
+        if (op == null) return;
+        var parameters = new DialogParameters { ["ContentText"] = $"Are you sure you want to delete operator '{op.OperatorName}'? This action cannot be undone." };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
-        var dialog = DialogService.Show<MudBlazor.MudMessageBox>("Delete Operator", parameters, options);
+        var dialog = await DialogService.ShowAsync<MudBlazor.MudMessageBox>("Delete Operator", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -259,7 +263,7 @@
     {
         var parameters = new DialogParameters { ["OperatorID"] = Id };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<OperatorContactDialog>("Add Operator Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<OperatorContactDialog>("Add Operator Contact", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -272,7 +276,7 @@
     {
         var parameters = new DialogParameters { ["OperatorID"] = Id, ["ContactID"] = contact.OperatorContactID };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<OperatorContactDialog>("Edit Operator Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<OperatorContactDialog>("Edit Operator Contact", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -285,7 +289,7 @@
     {
         var parameters = new DialogParameters { ["ContentText"] = $"Are you sure you want to delete contact '{contact.ContactName}'?" };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
-        var dialog = DialogService.Show<MudBlazor.MudMessageBox>("Delete Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<MudBlazor.MudMessageBox>("Delete Contact", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)

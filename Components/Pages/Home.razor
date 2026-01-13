@@ -1,7 +1,143 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 
-<PageTitle>Home</PageTitle>
+<PageTitle>San Saba Royalty - Acquisition Management System</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized Context="authState">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+            <MudPaper Elevation="0" Class="pa-6 mb-6">
+                <MudText Typo="Typo.h3" Class="mb-4" Style="color: var(--sansaba-primary);">
+                    Welcome, @authState.User.Identity?.Name
+                </MudText>
+                <MudText Typo="Typo.h5" Class="mb-2">
+                    San Saba Royalty Acquisition Management System
+                </MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    Manage mineral rights acquisitions, track deals, and coordinate with buyers, sellers, and referrers.
+                </MudText>
+            </MudPaper>
 
-Welcome to your new app.
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Acquisitions</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Create and manage mineral rights acquisitions, track deal status, and coordinate with field landmen.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/acquisitions" FullWidth="true">
+                            View Acquisitions
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.Gavel" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Letter Agreements</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Manage letter agreements, track pre-acquisition workflow, and coordinate with attorneys.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/letteragreements" FullWidth="true">
+                            View Letter Agreements
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Reports</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Generate reports for drafts due, buyer invoices, purchases, and referrer 1099 summaries.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/reports" FullWidth="true">
+                            View Reports
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Buyers & Sellers</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Manage buyer and seller information, contacts, and track relationships across deals.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/buyers" FullWidth="true">
+                            Manage Contacts
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Referrers</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Track referrer relationships, manage commission payments, and generate 1099 reports.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/referrers" FullWidth="true">
+                            View Referrers
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.Article" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Documents</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            Generate acquisition documents from templates and manage document workflow.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/documents/templates" FullWidth="true">
+                            Document Templates
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudPaper Elevation="0" Class="pa-6 mt-6" Style="background-color: rgba(0, 90, 93, 0.05);">
+                <MudText Typo="Typo.h6" Class="mb-3">About San Saba Royalty</MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Since 2003, San Saba Royalty Company has been a leading buyer of oil, gas, and mineral rights across the United States.
+                    With over $1 billion in total acquisitions, we provide liquidity solutions for mineral owners while maintaining
+                    the highest standards of professionalism and integrity.
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    This internal system supports our team of landmen, attorneys, and administrative staff in managing
+                    the complete lifecycle of mineral rights acquisitions—from initial contact through closing and beyond.
+                </MudText>
+            </MudPaper>
+        </MudContainer>
+    </Authorized>
+    <NotAuthorized>
+        <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-16">
+            <MudPaper Elevation="4" Class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                <MudText Typo="Typo.h4" Class="mb-4" Style="color: var(--sansaba-primary);">
+                    San Saba Royalty
+                </MudText>
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    Acquisition Management System
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-6" Color="Color.Secondary">
+                    This is an internal system for San Saba Royalty Company employees and authorized partners.
+                    Please log in to access acquisition management tools, reports, and documentation.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Href="/account/login">
+                    Login to Continue
+                </MudButton>
+                
+                <MudDivider Class="my-6" />
+                
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    <strong>San Saba Royalty Company</strong><br />
+                    Leading buyer of oil, gas, and mineral rights since 2003<br />
+                    Over $1 billion in total acquisitions
+                </MudText>
+            </MudPaper>
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>

@@ -36,7 +36,7 @@
                 {
                     <tr>
                         <td>
-                            <MudSelect T="int" @bind-Value="request.OperatorID" Label="Select Operator" Required="true" Dense="true" Margin="Margin.Dense">
+                            <MudSelect T="int" @bind-Value="request.OperatorID" Label="Select Operator" Required="true" Margin="Margin.Dense">
                                 <MudSelectItem Value="0">-- Select One --</MudSelectItem>
                                 @foreach (var op in _operators)
                                 {
@@ -45,10 +45,10 @@
                             </MudSelect>
                         </td>
                         <td>
-                            <MudDatePicker @bind-Date="request.CheckDate" Label="Check Date" Editable="true" Required="true" Dense="true" Margin="Margin.Dense" />
+                            <MudDatePicker @bind-Date="request.CheckDate" Label="Check Date" Editable="true" Required="true" Margin="Margin.Dense" />
                         </td>
                         <td>
-                            <MudNumericField @bind-Value="request.NumberOfCopies" Label="Copies" Min="1" Max="999" Required="true" Dense="true" Margin="Margin.Dense" />
+                            <MudNumericField @bind-Value="request.NumberOfCopies" Label="Copies" Min="1" Max="999" Required="true" Margin="Margin.Dense" />
                         </td>
                         <td>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveRow(request))" Disabled="@(_requests.Count <= 1)" />

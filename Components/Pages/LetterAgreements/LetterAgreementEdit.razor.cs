@@ -317,9 +317,12 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task AddUnit()
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var parameters = new DialogParameters<Dialogs.LetterAgreementUnitDialog>
         {
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID }
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID }
         };
 
         var dialog = await DialogService.ShowAsync<Dialogs.LetterAgreementUnitDialog>("Add Unit", parameters);
@@ -342,10 +345,13 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task EditUnit(LetterAgreementUnit unit)
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var parameters = new DialogParameters<Dialogs.LetterAgreementUnitDialog>
         {
             { x => x.Unit, unit },
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID }
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID }
         };
 
         var dialog = await DialogService.ShowAsync<Dialogs.LetterAgreementUnitDialog>("Edit Unit", parameters);
@@ -457,10 +463,13 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task AddNote()
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var noteTypes = await LetterAgreementService.GetNoteTypesAsync();
         var parameters = new DialogParameters<Dialogs.LetterAgreementNoteDialog>
         {
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID },
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID },
             { x => x.NoteTypes, noteTypes }
         };
 
@@ -484,11 +493,14 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task EditNote(LetterAgreementNote note)
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var noteTypes = await LetterAgreementService.GetNoteTypesAsync();
         var parameters = new DialogParameters<Dialogs.LetterAgreementNoteDialog>
         {
             { x => x.Note, note },
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID },
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID },
             { x => x.NoteTypes, noteTypes }
         };
 
@@ -537,10 +549,13 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task AddReferrer()
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var referrers = await LetterAgreementService.GetAllReferrersAsync();
         var parameters = new DialogParameters<Dialogs.LetterAgreementReferrerDialog>
         {
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID },
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID },
             { x => x.Referrers, referrers }
         };
 
@@ -565,11 +580,14 @@ public partial class LetterAgreementEdit : ComponentBase
 
     private async Task EditReferrer()
     {
+        var letterAgreement = _letterAgreement;
+        if (letterAgreement == null) return;
+
         var referrers = await LetterAgreementService.GetAllReferrersAsync();
         var parameters = new DialogParameters<Dialogs.LetterAgreementReferrerDialog>
         {
             { x => x.Referrer, _referrer },
-            { x => x.LetterAgreementId, _letterAgreement!.LetterAgreementID },
+            { x => x.LetterAgreementId, letterAgreement.LetterAgreementID },
             { x => x.Referrers, referrers }
         };
 
@@ -583,7 +601,7 @@ public partial class LetterAgreementEdit : ComponentBase
                 if (result.Data == null)
                 {
                     // Delete was requested
-                    await LetterAgreementService.DeleteReferrerAsync(_letterAgreement.LetterAgreementID);
+                    await LetterAgreementService.DeleteReferrerAsync(letterAgreement.LetterAgreementID);
                     _referrer = null;
                     _referrerName = null;
                     Snackbar.Add("Referrer removed.", Severity.Success);
@@ -591,7 +609,7 @@ public partial class LetterAgreementEdit : ComponentBase
                 else if (result.Data is LetterAgreementReferrer updatedReferrer)
                 {
                     await LetterAgreementService.SaveReferrerAsync(updatedReferrer);
-                    _referrer = await LetterAgreementService.GetReferrerAsync(_letterAgreement.LetterAgreementID);
+                    _referrer = await LetterAgreementService.GetReferrerAsync(letterAgreement.LetterAgreementID);
                     _referrerName = _referrer?.Referrer?.ReferrerName;
                     Snackbar.Add("Referrer updated successfully.", Severity.Success);
                 }

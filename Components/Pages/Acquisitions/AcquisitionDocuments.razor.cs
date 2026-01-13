@@ -15,6 +15,9 @@ public partial class AcquisitionDocuments
     [Parameter]
     public int AcquisitionId { get; set; }
 
+    [Parameter]
+    public bool ShowTabs { get; set; } = true;
+
     #endregion
 
     #region Injected Services

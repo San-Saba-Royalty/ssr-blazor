@@ -8,6 +8,8 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 
+@inject IWebHostEnvironment Environment
+
 <PageTitle>Edit Document Template</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
@@ -38,7 +40,7 @@
 
                         <MudItem xs="12">
                             <MudText Typo="Typo.subtitle2">Current Document:</MudText>
-                            @if (!string.IsNullOrEmpty(_documentTemplate.DSFileID))
+                            @if (!string.IsNullOrEmpty(_documentTemplate.DocumentTemplateLocation))
                             {
                                 <MudLink Href="@GetDocumentUrl(_documentTemplate)" Target="_blank">
                                     <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Description">
@@ -50,7 +52,7 @@
 
                         <MudItem xs="12">
                             <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".doc,.docx,.pdf">
-                                <ButtonTemplate>
+                                <ActivatorContent>
                                     <MudButton HtmlTag="label"
                                                Variant="Variant.Outlined"
                                                Color="Color.Primary"
@@ -58,7 +60,7 @@
                                                for="@context">
                                         Upload New Document
                                     </MudButton>
-                                </ButtonTemplate>
+                                </ActivatorContent>
                             </MudFileUpload>
                             @if (_selectedFile != null)
                             {
@@ -100,7 +102,7 @@
             </MudTabPanel>
 
             <MudTabPanel Text="Custom Fields">
-                <MudDataGrid T="DocTemplateCustomField" Items="@_customFields" Editable="true" 
+                <MudDataGrid T="DocTemplateCustomField" Items="@_customFields" ReadOnly="false" 
                              EditMode="DataGridEditMode.Form" CommittedItemChanges="@OnCustomFieldUpdated">
                     <ToolBarContent>
                         <MudText Typo="Typo.h6">Custom Merge Fields</MudText>
@@ -218,10 +220,9 @@
                     return;
                 }
 
-                // Update the location
+                // Update the location and save file
                 _documentTemplate.DocumentTemplateLocation = _selectedFile.Name;
-                // TODO: Upload file to DocuShare and update DSFileID
-                // _documentTemplate.DSFileID = await UploadFileToStorage(_selectedFile);
+                await SaveFileAsync(_selectedFile);
             }
 
             // Update custom fields collection
@@ -237,6 +238,26 @@
             Snackbar.Add($"Error updating template: {ex.Message}", Severity.Error);
         }
     }
+
+    private async Task SaveFileAsync(IBrowserFile file)
+    {
+        var webRoot = Environment.WebRootPath;
+        var templateDir = Path.Combine(webRoot, "Documents", "Templates");
+        Directory.CreateDirectory(templateDir);
+        
+        // We use the original filename as location reference
+        var filePath = Path.Combine(templateDir, file.Name);
+        
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            using (var uploadStream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)) // 10MB max
+            {
+                await uploadStream.CopyToAsync(stream);
+            }
+        }
+    }
+
+    // ... existing Delete, Add/Edit CustomFields, etc ...
 
     private async Task DeleteTemplate()
     {
@@ -285,7 +306,7 @@
         };
 
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<DocTemplateCustomFieldDialog>("Add Custom Field", parameters, options);
+        var dialog = await DialogService.ShowAsync<DocTemplateCustomFieldDialog>("Add Custom Field", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled && result.Data is DocTemplateCustomField field)
@@ -304,7 +325,7 @@
         };
 
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<DocTemplateCustomFieldDialog>("Edit Custom Field", parameters, options);
+        var dialog = await DialogService.ShowAsync<DocTemplateCustomFieldDialog>("Edit Custom Field", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)

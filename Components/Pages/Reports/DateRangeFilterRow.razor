@@ -1,7 +1,7 @@
 @using MudBlazor
 @using SSRBlazor.Models
 
-<MudGrid Class="mb-2" AlignItems="MudBlazor.AlignItems.Center">
+<MudGrid Class="mb-2 align-center">
     <MudItem xs="12" sm="2">
         <MudText Typo="Typo.body2">@Label:</MudText>
     </MudItem>
@@ -10,7 +10,7 @@
             <MudText Typo="Typo.caption" Style="min-width: 35px;">From:</MudText>
             <MudDatePicker @bind-Date="Filter.FromDate"
                            Variant="Variant.Outlined"
-                           Dense="true"
+                           
                            Margin="Margin.Dense"
                            DateFormat="MM/dd/yyyy"
                            Style="max-width: 140px;" />
@@ -21,7 +21,7 @@
             <MudText Typo="Typo.caption" Style="min-width: 25px;">To:</MudText>
             <MudDatePicker @bind-Date="Filter.ToDate"
                            Variant="Variant.Outlined"
-                           Dense="true"
+                           
                            Margin="Margin.Dense"
                            DateFormat="MM/dd/yyyy"
                            Style="max-width: 140px;" />
@@ -31,11 +31,11 @@
         <MudStack Row="true" Spacing="2">
             <MudCheckBox @bind-Value="Filter.IsEmpty" 
                          Label="Is Empty" 
-                         Dense="true"
+                         
                          Size="Size.Small" />
             <MudCheckBox @bind-Value="Filter.IsNotEmpty" 
                          Label="Is Not Empty" 
-                         Dense="true"
+                         
                          Size="Size.Small" />
         </MudStack>
     </MudItem>

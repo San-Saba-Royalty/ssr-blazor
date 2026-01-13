@@ -37,16 +37,17 @@ public class AccountController : Controller
         // Create claims
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, user.Email ?? user.UserId),
-            new Claim(ClaimTypes.NameIdentifier, user.UserId),
+            new Claim(ClaimTypes.Name, user.Email ?? user.UserId.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(ClaimTypes.Email, user.Email ?? ""),
         };
 
-        // Add role claims if user has roles (assuming UserRoles property is populated)
-        // If legacy code used "Administrator" session variable, we map it here:
-        // Checking for "Administrator" usually implies a role or specific flag check.
-        // User entity has login status but maybe not a direct Role property visible in the snippet I saw earlier.
-        // I will assume for now we just log them in. If explicit roles are needed I'd add them here.
+        // Add Administrator claim if user is an administrator
+        if (user.Administrator)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+            claims.Add(new Claim("IsAdministrator", "true"));
+        }
         
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var authProperties = new AuthenticationProperties

@@ -41,7 +41,7 @@
 
 @code {
     private List<AppraisalGroup> _appraisalGroups = new();
-    private string _searchString;
+    private string _searchString = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,12 +74,11 @@
     {
         var parameters = new DialogParameters();
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<AppraisalGroupDialog>("Add Appraisal Group", parameters, options);
+        var dialog = await DialogService.ShowAsync<AppraisalGroupDialog>("Add Appraisal Group", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false, Data: AppraisalGroup newGroup })
         {
-            var newGroup = (AppraisalGroup)result.Data;
             try 
             {
                 await AppraisalGroupService.AddAsync(newGroup);
@@ -97,12 +96,11 @@
     {
         var parameters = new DialogParameters { ["AppraisalGroup"] = group };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<AppraisalGroupDialog>("Edit Appraisal Group", parameters, options);
+        var dialog = await DialogService.ShowAsync<AppraisalGroupDialog>("Edit Appraisal Group", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false, Data: AppraisalGroup updatedGroup })
         {
-            var updatedGroup = (AppraisalGroup)result.Data;
             try
             {
                 await AppraisalGroupService.UpdateAsync(updatedGroup);

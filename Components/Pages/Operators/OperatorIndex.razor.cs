@@ -26,8 +26,8 @@ public partial class OperatorIndex : ComponentBase
     private int _totalCount = 0;
 
     // Messages
-    private string _displayMessage = string.Empty;
-    private string _errorMessage = string.Empty;
+    private string? _displayMessage = string.Empty;
+    private string? _errorMessage = string.Empty;
 
     // Context Menu
     private MudMenu? _contextMenu;

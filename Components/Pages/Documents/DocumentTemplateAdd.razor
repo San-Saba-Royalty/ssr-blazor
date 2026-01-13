@@ -34,7 +34,7 @@
 
                 <MudItem xs="12">
                     <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".doc,.docx,.pdf">
-                        <ButtonTemplate>
+                        <ActivatorContent>
                             <MudButton HtmlTag="label"
                                        Variant="Variant.Filled"
                                        Color="Color.Primary"
@@ -42,7 +42,7 @@
                                        for="@context">
                                 Select Template File
                             </MudButton>
-                        </ButtonTemplate>
+                        </ActivatorContent>
                     </MudFileUpload>
                     @if (_selectedFile != null)
                     {

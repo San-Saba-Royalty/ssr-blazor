@@ -7,13 +7,16 @@
 
 <PageTitle>Acquisition Documents</PageTitle>
 
-@* Tab Navigation *@
-<MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
-    <MudTabPanel Text="Acquisition Information" OnClick="@(() => NavigateToTab("info"))" />
-    <MudTabPanel Text="Notes" OnClick="@(() => NavigateToTab("notes"))" />
-    <MudTabPanel Text="Documents" />
-    <MudTabPanel Text="Audit History" OnClick="@(() => NavigateToTab("audit"))" />
-</MudTabs>
+@if (ShowTabs)
+{
+    @* Tab Navigation *@
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+        <MudTabPanel Text="Acquisition Information" OnClick="@(() => NavigateToTab("info"))" />
+        <MudTabPanel Text="Notes" OnClick="@(() => NavigateToTab("notes"))" />
+        <MudTabPanel Text="Documents" />
+        <MudTabPanel Text="Audit History" OnClick="@(() => NavigateToTab("audit"))" />
+    </MudTabs>
+}
 
 @* Messages *@
 @if (!string.IsNullOrEmpty(_displayMessage))
@@ -207,7 +210,7 @@
                                    Color="Color.Primary" 
                                    Size="Size.Small"
                                    OnClick="@(() => DownloadDocument(context.Item))"
-                                   Title="Download" />
+                                   title="Download" />
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -218,7 +221,7 @@
                                Color="Color.Secondary" 
                                Size="Size.Small"
                                OnClick="@(() => UploadToDocument(context.Item))"
-                               Title="Upload new version" />
+                               title="Upload new version" />
             </CellTemplate>
         </TemplateColumn>
         

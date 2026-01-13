@@ -42,7 +42,7 @@
                                 <MudSelectItem T="int?" Value="null">-- Select --</MudSelectItem>
                                 @foreach (var u in _landmen)
                                 {
-                                    <MudSelectItem T="int?" Value="@(int.TryParse(u.UserId, out var uid) ? uid : (int?)null)">@u.FirstName @u.LastName</MudSelectItem>
+                                    <MudSelectItem T="int?" Value="@u.UserId">@u.FirstName @u.LastName</MudSelectItem>
                                 }
                             </MudSelect>
                         </MudItem>
@@ -284,7 +284,14 @@
                 
                 <!-- Tab 6: Documents (Placeholder for nested component) -->
                 <MudTabPanel Text="Documents">
-                    <MudAlert Severity="Severity.Info">Document Management Component will go here.</MudAlert>
+                    @if (_acquisition.AcquisitionID > 0)
+                    {
+                        <AcquisitionDocuments AcquisitionId="@_acquisition.AcquisitionID" ShowTabs="false" />
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">Please save the acquisition before managing documents.</MudAlert>
+                    }
                 </MudTabPanel>
 
             </MudTabs>
@@ -452,7 +459,8 @@
     // Unit Methods
     private async Task AddUnit()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionUnitDialog> 
         { 
@@ -463,10 +471,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionUnitDialog>("Add Unit", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionUnit newItem)
+        if (result is { Canceled: false, Data: AcquisitionUnit newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionUnits.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionUnits.Add(newItem);
             StateHasChanged();
         }
     }
@@ -482,7 +490,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionUnitDialog>("Edit Unit", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }
@@ -492,13 +500,14 @@
 
     private async Task SaveAcquisition()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
         
         try 
         {
-            if (_acquisition.AcquisitionID == 0)
+            if (acquisition.AcquisitionID == 0)
             {
-                await AcquisitionRepo.AddAsync(_acquisition);
+                await AcquisitionRepo.AddAsync(acquisition);
             }
             
             await AcquisitionRepo.SaveChangesAsync();
@@ -521,16 +530,17 @@
 
     private async Task AddSeller()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionSellerDialog> { { x => x.Seller, new AcquisitionSeller() } };
         var dialog = await DialogService.ShowAsync<AcquisitionSellerDialog>("Add Seller", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionSeller newSeller)
+        if (result is { Canceled: false, Data: AcquisitionSeller newSeller })
         {
-            newSeller.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionSellers.Add(newSeller);
+            newSeller.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionSellers.Add(newSeller);
             StateHasChanged();
         }
     }
@@ -541,7 +551,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionSellerDialog>("Edit Seller", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }
@@ -550,7 +560,8 @@
     // County Methods
     private async Task AddCounty()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionCountyDialog> 
         { 
@@ -560,10 +571,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionCountyDialog>("Add County", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionCounty newItem)
+        if (result is { Canceled: false, Data: AcquisitionCounty newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionCounties.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionCounties.Add(newItem);
             StateHasChanged();
         }
     }
@@ -578,7 +589,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionCountyDialog>("Edit County", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }
@@ -587,7 +598,8 @@
     // Operator Methods
     private async Task AddOperator()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionOperatorDialog> 
         { 
@@ -597,10 +609,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionOperatorDialog>("Add Operator", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionOperator newItem)
+        if (result is { Canceled: false, Data: AcquisitionOperator newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionOperators.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionOperators.Add(newItem);
             StateHasChanged();
         }
     }
@@ -615,7 +627,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionOperatorDialog>("Edit Operator", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }
@@ -623,7 +635,8 @@
     // Referrer Methods
     private async Task AddReferrer()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionReferrerDialog> 
         { 
@@ -633,10 +646,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionReferrerDialog>("Add Referrer", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionReferrer newItem)
+        if (result is { Canceled: false, Data: AcquisitionReferrer newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionReferrers.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionReferrers.Add(newItem);
             CalculateFinancials();
             StateHasChanged();
         }
@@ -652,7 +665,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionReferrerDialog>("Edit Referrer", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              CalculateFinancials();
              StateHasChanged();
@@ -662,7 +675,8 @@
     // Lien Methods
     private async Task AddLien()
     {
-         if (_acquisition == null) return;
+         var acquisition = _acquisition;
+         if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionLienDialog> 
         { 
@@ -672,10 +686,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionLienDialog>("Add Lien", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcquisitionLien newItem)
+        if (result is { Canceled: false, Data: AcquisitionLien newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-            _acquisition.AcquisitionLiens.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+            acquisition.AcquisitionLiens.Add(newItem);
             StateHasChanged();
         }
     }
@@ -690,7 +704,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionLienDialog>("Edit Lien", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }
@@ -699,7 +713,8 @@
     // Curative Methods
     private async Task AddCurative()
     {
-        if (_acquisition == null) return;
+        var acquisition = _acquisition;
+        if (acquisition == null) return;
 
         var parameters = new DialogParameters<AcquisitionCurativeDialog> 
         { 
@@ -709,10 +724,10 @@
         var dialog = await DialogService.ShowAsync<AcquisitionCurativeDialog>("Add Requirement", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is AcqCurativeRequirement newItem)
+        if (result is { Canceled: false, Data: AcqCurativeRequirement newItem })
         {
-            newItem.AcquisitionID = _acquisition.AcquisitionID;
-             _acquisition.AcqCurativeRequirements.Add(newItem);
+            newItem.AcquisitionID = acquisition.AcquisitionID;
+             acquisition.AcqCurativeRequirements.Add(newItem);
             StateHasChanged();
         }
     }
@@ -727,7 +742,7 @@
         var dialog = await DialogService.ShowAsync<AcquisitionCurativeDialog>("Edit Requirement", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
              StateHasChanged();
         }

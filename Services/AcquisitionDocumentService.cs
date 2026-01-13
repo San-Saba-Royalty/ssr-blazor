@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SSRBlazor.Models;
 using SSRBusiness.BusinessClasses;
@@ -11,15 +12,24 @@ namespace SSRBlazor.Services;
 public class AcquisitionDocumentService
 {
     private readonly AcquisitionDocumentRepository _repository;
+    private readonly AcquisitionRepository _acquisitionRepo; // Added
+    private readonly UserRepository _userRepo; // Added
+    private readonly AuthenticationStateProvider _authStateProvider; // Added
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AcquisitionDocumentService> _logger;
 
     public AcquisitionDocumentService(
         AcquisitionDocumentRepository repository,
+        AcquisitionRepository acquisitionRepo,
+        UserRepository userRepo,
+        AuthenticationStateProvider authStateProvider,
         IWebHostEnvironment environment,
         ILogger<AcquisitionDocumentService> logger)
     {
         _repository = repository;
+        _acquisitionRepo = acquisitionRepo;
+        _userRepo = userRepo;
+        _authStateProvider = authStateProvider;
         _environment = environment;
         _logger = logger;
     }
@@ -164,6 +174,7 @@ public class AcquisitionDocumentService
     {
         try
         {
+            // 1. Get Template
             var template = await _repository.GetDocumentTemplateByIdAsync(request.DocumentTemplateID);
             if (template == null)
                 return new DocumentOperationResult { Success = false, Error = "Document template not found" };
@@ -171,14 +182,80 @@ public class AcquisitionDocumentService
             if (string.IsNullOrEmpty(template.DocumentTemplateLocation))
                 return new DocumentOperationResult { Success = false, Error = "Template file path not configured" };
 
-            // TODO: Implement actual document generation logic
-            var generatedFileName = $"Generated_{template.DocumentTemplateDesc}_{DateTime.Now:yyyyMMddHHmmss}.docx";
-            var outputPath = Path.Combine("Documents", "Generated", generatedFileName);
+            // 2. Get Acquisition Data
+            var acquisition = await _acquisitionRepo.LoadAcquisitionByAcquisitionIDAsync(request.AcquisitionID);
+            if (acquisition == null)
+                 return new DocumentOperationResult { Success = false, Error = "Acquisition not found" };
 
-            _logger.LogInformation("Document generation requested for template {TemplateId}, acquisition {AcquisitionId}",
-                request.DocumentTemplateID, request.AcquisitionID);
+            // 3. Get Current User
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User.Identity?.Name;
+            User? user = null;
+            if (!string.IsNullOrEmpty(userName))
+            {
+                user = await _userRepo.LoadUserByUserNameAsync(userName);
+            }
 
-            return new DocumentOperationResult { Success = true, FilePath = outputPath };
+            // 4. Setup Paths
+            // Assuming templates are stored in wwwroot/Documents/Templates
+            // and we save generated files to wwwroot/Documents/Generated
+            var webRoot = _environment.WebRootPath;
+            var templateDir = Path.Combine(webRoot, "Documents", "Templates");
+            var outputDir = Path.Combine(webRoot, "Documents", "Generated");
+            
+            // Ensure directories exist
+            Directory.CreateDirectory(templateDir);
+            Directory.CreateDirectory(outputDir);
+
+            var sourcePath = Path.Combine(templateDir, template.DocumentTemplateLocation);
+            
+            // Fallback: check if location is full path or just filename
+            if (!File.Exists(sourcePath))
+            {
+                // Try absolute path if stored that way
+                if (File.Exists(template.DocumentTemplateLocation))
+                {
+                    sourcePath = template.DocumentTemplateLocation;
+                }
+                else
+                {
+                     return new DocumentOperationResult { Success = false, Error = $"Template file not found at {sourcePath}" };
+                }
+            }
+
+            var generatedFileName = $"{acquisition.AcquisitionNumber ?? "Acq"}_{template.DocumentTemplateDesc}_{DateTime.Now:yyyyMMddHHmmss}.docx";
+            // Sanitize filename
+            generatedFileName = string.Join("_", generatedFileName.Split(Path.GetInvalidFileNameChars()));
+            
+            var outputPath = Path.Combine(outputDir, generatedFileName);
+
+            _logger.LogInformation("Generating document {FileName} for Acq {AcqID} using Template {TemplateID}", 
+                generatedFileName, request.AcquisitionID, request.DocumentTemplateID);
+
+            // 5. Generate Document
+            var engine = new WordTemplateEngine();
+            // TODO: Handle custom fields from request if Engine supports it? 
+            // Current Engine doesn't seem to take custom field values dictionary, relies on Entity data.
+            // If Request has custom values, we might need to apply them AFTER engine or modify engine.
+            // For now, using standard Engine.
+            
+            engine.CreateMergeDocument(sourcePath, outputPath, acquisition, user, request.DocumentTemplateID.ToString());
+
+            // 6. Register in Database
+            var docRecord = new AcquisitionDocument
+            {
+                AcquisitionID = acquisition.AcquisitionID,
+                CreatedOn = DateTime.Now,
+                UserId = user?.UserId ?? 0
+                // DocumentLocation = generatedFileName // If column exists? Using ID/Handle for now.
+            };
+
+            await _repository.AddAcquisitionDocumentAsync(docRecord);
+
+            // Return relative path for download
+            var relativePath = $"/Documents/Generated/{generatedFileName}";
+
+            return new DocumentOperationResult { Success = true, FilePath = relativePath };
         }
         catch (Exception ex)
         {
@@ -202,16 +279,52 @@ public class AcquisitionDocumentService
     {
         try
         {
-            // For now, just create a minimal database record
+            // 1. Get Current User
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User.Identity?.Name;
+            var userId = 0;
+            if (!string.IsNullOrEmpty(userName))
+            {
+                var user = await _userRepo.LoadUserByUserNameAsync(userName);
+                if (user != null) userId = user.UserId;
+            }
+
+            // 2. Save File
+            var webRoot = _environment.WebRootPath;
+            var uploadDir = Path.Combine(webRoot, "Documents", "Uploads");
+            Directory.CreateDirectory(uploadDir);
+
+            var safeFileName = $"{acquisitionId}_{DateTime.Now:yyyyMMdd}_{fileName}";
+            safeFileName = string.Join("_", safeFileName.Split(Path.GetInvalidFileNameChars()));
+            var filePath = Path.Combine(uploadDir, safeFileName);
+
+            using (var fs = new FileStream(filePath, FileMode.Create))
+            {
+                await fileStream.CopyToAsync(fs);
+            }
+
+            // 3. Create Record
             var document = new AcquisitionDocument
             {
                 AcquisitionID = acquisitionId,
                 CreatedOn = DateTime.Now,
-                UserId = "System" // TODO: Get current user
+                UserId = userId
+                // DocumentLocation = safeFileName
             };
 
             await _repository.AddAcquisitionDocumentAsync(document);
             
+            // Add new note
+            var note = new AcquisitionNote
+            {
+                AcquisitionID = acquisitionId,
+                UserID = userId, // Use the integer UserID
+                CreatedDateTime = DateTime.Now,
+                NoteTypeCode = "D", // Draft notes from old system seem to map here
+                NoteText = $"Uploaded document: {fileName}" // Placeholder for actual notes
+            };
+            await _repository.AddAcquisitionNoteAsync(note); // Assuming a method to add notes
+
             return new DocumentOperationResult { Success = true };
         }
         catch (Exception ex)

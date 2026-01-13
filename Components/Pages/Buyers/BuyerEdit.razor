@@ -182,12 +182,11 @@
     {
         var parameters = new DialogParameters();
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<BuyerContactDialog>("Add Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<BuyerContactDialog>("Add Contact", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (!result.Canceled && result.Data is BuyerContact newContact)
         {
-            var newContact = (BuyerContact)result.Data;
             newContact.BuyerID = BuyerId; // Ensure link
             try
             {
@@ -207,12 +206,11 @@
     {
         var parameters = new DialogParameters { ["Contact"] = contact };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<BuyerContactDialog>("Edit Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<BuyerContactDialog>("Edit Contact", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (!result.Canceled && result.Data is BuyerContact updatedContact)
         {
-            var updatedContact = (BuyerContact)result.Data;
             try
             {
                 await BuyerContactService.UpdateAsync(updatedContact);

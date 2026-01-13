@@ -46,7 +46,7 @@
 
             <MudText Typo="Typo.h6">Display Fields for Acquisition List</MudText>
             
-            <MudPaper Variant="Variant.Outlined" Class="pa-4" Style="max-height: 500px; overflow-y: auto;">
+            <MudPaper Outlined="true" Class="pa-4" Style="max-height: 500px; overflow-y: auto;">
                 <MudGrid Spacing="1">
                     @foreach (var field in _config.Fields.OrderBy(f => f.DisplayOrder))
                     {

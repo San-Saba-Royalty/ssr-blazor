@@ -131,15 +131,16 @@
             // userEntity.Entity.Email = txtEmail.Text.Trim
             //
             // User.cs generated from modern dotnet10:
-            // public string UserId { get; set; }
-            // public string? Email { get; set; }
-            // 
-            // Using UserId as UserName seems most appropriate if no explicit UserName column exists on the entity.
-             UserId = _registerModel.UserName,
-             Email = _registerModel.Email,
-             FirstName = _registerModel.FirstName,
-             LastName = _registerModel.LastName,
-             IsActive = false // Default to inactive as per legacy
+             // User.cs generated from modern dotnet10:
+             // public int UserId { get; set; }
+             // public string? UserName { get; set; }
+             // 
+             // Mapping UserName to UserName, UserId is auto-generated.
+              UserName = _registerModel.UserName,
+              Email = _registerModel.Email,
+              FirstName = _registerModel.FirstName,
+              LastName = _registerModel.LastName,
+              IsActive = false // Default to inactive as per legacy
         };
 
         try 

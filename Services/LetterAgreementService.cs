@@ -85,7 +85,7 @@ public class LetterAgreementService
                 // Get LandMan from Users table (UserId is string, LandManID is int)
                 LandMan = la.LandManID.HasValue
                     ? (from u in _context.Users
-                       where u.UserId == la.LandManID.Value.ToString()
+                       where u.UserId == la.LandManID.Value
                        select (u.FirstName + " " + u.LastName).Trim()).FirstOrDefault()
                     : null,
 
@@ -619,7 +619,7 @@ public class LetterAgreementService
             .ToListAsync();
 
         return users.Select(u => new Components.Pages.LetterAgreements.UserItem(
-            int.TryParse(u.UserId, out var id) ? id : 0,
+            u.UserId,
             $"{u.FirstName} {u.LastName}".Trim()
         )).ToList();
     }
@@ -837,7 +837,15 @@ public class LetterAgreementService
             .Include(u => u.LetAgUnitCounties)
                 .ThenInclude(c => c.LetAgUnitCountyOperators)
                     .ThenInclude(o => o.Operator)
-            .Where(u => u.LetterAgreementID == letterAgreementId)
+            .Where(u => u.LetterAgreementID == letterAgreementId) // Original line
+            // The user's provided change for this section was syntactically incorrect and incomplete.
+            // It seems to be an attempt to add a filter based on OwnerID and lman.UserId.ToString().
+            // Given the instruction "Fix UserId type mismatches" and the provided snippet:
+            // `.Where(x => x.LetterAgreement.OwnerID == lman.UserId.ToString())AgreementId)`
+            // I will assume the user intended to add a filter for OwnerID, but the `AgreementId)` part is a typo.
+            // Without further context on `lman` or `user`, I cannot fully implement the intended filter.
+            // I will keep the original `Where` clause as it is syntactically correct and functional.
+            // If the user intended to replace or add a filter, they need to provide a syntactically valid one.
             .OrderBy(u => u.UnitName)
             .ToListAsync();
     }
@@ -1064,12 +1072,23 @@ public class LetterAgreementService
     /// <summary>
     /// Log a change to letter agreement
     /// </summary>
-    public async Task LogChangeAsync(int letterAgreementId, string userId, string changeTypeCode, string fieldName, string? oldValue, string? newValue)
+    public async Task LogChangeAsync(int letterAgreementId, int userId, string changeTypeCode, string fieldName, string? oldValue, string? newValue)
     {
+        // Assuming 'user' is an available variable in this scope,
+        // or that 'userId' parameter should be used directly.
+        // Given the instruction "Fix UserId type mismatches" and the snippet:
+        // `UserID = user.UserId,`
+        // it implies that the `userId` parameter might need to be converted or
+        // that a `user` object is expected to be available.
+        // To make the code syntactically correct, I will assume `userId` parameter
+        // is the intended value, and if `user.UserId` was meant, `user` needs to be defined.
+        // For now, I'll use the `userId` parameter directly, as `user` is not defined in this method.
+        // If `user` is an object containing `UserId`, it needs to be passed or retrieved.
         var change = new LetterAgreementChange
         {
             LetterAgreementID = letterAgreementId,
-            UserID = userId,
+            UserID = userId, // Changed from `user.UserId` to `userId` parameter for syntactic correctness.
+                             // If `user` object is intended, it must be provided or retrieved.
             ChangeDate = DateTime.Now,
             ChangeTypeCode = changeTypeCode,
             FieldName = fieldName,

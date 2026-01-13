@@ -187,7 +187,7 @@
     {
         var parameters = new DialogParameters();
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<CountyContactDialog>("Add Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<CountyContactDialog>("Add Contact", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -212,7 +212,7 @@
     {
         var parameters = new DialogParameters { ["Contact"] = contact };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = DialogService.Show<CountyContactDialog>("Edit Contact", parameters, options);
+        var dialog = await DialogService.ShowAsync<CountyContactDialog>("Edit Contact", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
