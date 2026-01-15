@@ -1,0 +1,215 @@
+@using SSRBlazor.Models
+@using SSRBlazor.Services
+@using MudBlazor
+@inject IActionService ActionService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudAppBar Elevation="1" Dense="true" Color="Color.Surface">
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+        @* New Button *@
+        @if (IsActionVisible(ActionCommands.TLB_NEW))
+        {
+            <MudTooltip Text="New">
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_NEW))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_NEW))" />
+            </MudTooltip>
+        }
+
+        @* Save Button *@
+        @if (IsActionVisible(ActionCommands.TLB_SAVE))
+        {
+            <MudTooltip Text="Save">
+                <MudIconButton Icon="@Icons.Material.Filled.Save"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_SAVE))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_SAVE))" />
+            </MudTooltip>
+        }
+
+        @* Delete Button *@
+        @if (IsActionVisible(ActionCommands.TLB_DELETE))
+        {
+            <MudTooltip Text="Delete">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_DELETE))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_DELETE))" />
+            </MudTooltip>
+        }
+
+        @* Copy Button *@
+        @if (IsActionVisible(ActionCommands.TLB_COPY))
+        {
+            <MudTooltip Text="Copy">
+                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_COPY))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_COPY))" />
+            </MudTooltip>
+        }
+
+        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+        @* Filter Button *@
+        @if (IsActionVisible(ActionCommands.TLB_FILTER))
+        {
+            <MudTooltip Text="Filters">
+                <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_FILTER))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_FILTER))" />
+            </MudTooltip>
+        }
+
+        @* View Button *@
+        @if (IsActionVisible(ActionCommands.TLB_VIEW))
+        {
+            <MudTooltip Text="Views">
+                <MudIconButton Icon="@Icons.Material.Filled.ViewQuilt"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_VIEW))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_VIEW))" />
+            </MudTooltip>
+        }
+
+        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+        @* Back to Last Acquisition *@
+        @if (IsActionVisible(ActionCommands.TLB_BACK))
+        {
+            <MudTooltip Text="Back to Last Acquisition">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_BACK))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_BACK))" />
+            </MudTooltip>
+        }
+
+        @* Back to Last Letter Agreement *@
+        @if (IsActionVisible(ActionCommands.TLB_BACK_LETTERAGREEMENT))
+        {
+            <MudTooltip Text="Back to Last Letter Agreement">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               Disabled="@(!IsActionEnabled(ActionCommands.TLB_BACK_LETTERAGREEMENT))"
+                               OnClick="@(() => HandleActionAsync(ActionCommands.TLB_BACK_LETTERAGREEMENT))" />
+            </MudTooltip>
+        }
+    </MudStack>
+</MudAppBar>
+
+@code {
+    /// <summary>
+    /// The current page module (e.g., "Acquisition", "Filter", "View")
+    /// </summary>
+    [Parameter]
+    public string? CurrentModule { get; set; }
+
+    /// <summary>
+    /// Event callback when an action is executed
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnActionExecuted { get; set; }
+
+    /// <summary>
+    /// Optional override for which actions are enabled
+    /// </summary>
+    [Parameter]
+    public Dictionary<string, bool>? EnabledActions { get; set; }
+
+    /// <summary>
+    /// Optional override for which actions are visible
+    /// </summary>
+    [Parameter]
+    public HashSet<string>? VisibleActions { get; set; }
+
+    /// <summary>
+    /// Optional parameters to pass to actions
+    /// </summary>
+    [Parameter]
+    public Dictionary<string, object>? ActionParameters { get; set; }
+
+    private async Task HandleActionAsync(string actionCommand)
+    {
+        try
+        {
+            var result = await ActionService.ExecuteActionAsync(actionCommand, ActionParameters);
+
+            if (result.Success)
+            {
+                if (!string.IsNullOrEmpty(result.Message))
+                {
+                    Snackbar.Add(result.Message, Severity.Success);
+                }
+
+                if (!string.IsNullOrEmpty(result.NavigateToUrl))
+                {
+                    NavigationManager.NavigateTo(result.NavigateToUrl);
+                }
+
+                // Notify parent component
+                await OnActionExecuted.InvokeAsync(actionCommand);
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Action failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool IsActionEnabled(string actionCommand)
+    {
+        // Check if there's an override
+        if (EnabledActions != null && EnabledActions.TryGetValue(actionCommand, out var enabled))
+        {
+            return enabled;
+        }
+
+        // Otherwise use the service's logic
+        return ActionService.IsActionEnabled(actionCommand, CurrentModule);
+    }
+
+    private bool IsActionVisible(string actionCommand)
+    {
+        // If VisibleActions is specified, only show those actions
+        if (VisibleActions != null)
+        {
+            return VisibleActions.Contains(actionCommand);
+        }
+
+        // Default visibility based on module
+        return CurrentModule switch
+        {
+            "View" => actionCommand is ActionCommands.TLB_NEW or ActionCommands.TLB_SAVE 
+                or ActionCommands.TLB_DELETE or ActionCommands.TLB_FILTER,
+            
+            "Filter" => actionCommand is ActionCommands.TLB_NEW or ActionCommands.TLB_SAVE 
+                or ActionCommands.TLB_DELETE or ActionCommands.TLB_VIEW,
+            
+            "Acquisition" => actionCommand is ActionCommands.TLB_NEW or ActionCommands.TLB_DELETE 
+                or ActionCommands.TLB_COPY or ActionCommands.TLB_FILTER or ActionCommands.TLB_VIEW 
+                or ActionCommands.TLB_BACK,
+            
+            "LetterAgreement" => actionCommand is ActionCommands.TLB_NEW or ActionCommands.TLB_DELETE 
+                or ActionCommands.TLB_COPY or ActionCommands.TLB_FILTER or ActionCommands.TLB_VIEW 
+                or ActionCommands.TLB_BACK_LETTERAGREEMENT,
+            
+            _ => true // Show all by default
+        };
+    }
+}

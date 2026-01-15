@@ -1,8 +1,7 @@
 @using MudBlazor
-@page "/system/letteragreementdealstatuses"
+@page "/administration/letteragreementdealstatuses"
 @using SSRBusiness.Entities
 @using SSRBusiness.BusinessClasses
-@using MudBlazor 
 @inject LetterAgreementDealStatusRepository Repository
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -17,12 +16,14 @@
     <Columns>
         <PropertyColumn Property="x => x.DealStatusCode" Title="Code" />
         <PropertyColumn Property="x => x.StatusName" Title="Status Name" />
-        <PropertyColumn Property="x => x.DefaultStatus" Title="Default" />
+
         <PropertyColumn Property="x => x.ExcludeFromReports" Title="Exc. from Reports" />
         <TemplateColumn CellClass="d-flex justify-end">
             <CellTemplate>
                 <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
-                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" />
+                <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                @* Use Legacy logic: Delete not allowed *@
+                @* <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => Delete(context.Item))" /> *@
             </CellTemplate>
         </TemplateColumn>
     </Columns>
@@ -59,7 +60,7 @@
 
     private async Task Edit(LetterAgreementDealStatus item)
     {
-        var clone = new LetterAgreementDealStatus { DealStatusCode = item.DealStatusCode, StatusName = item.StatusName, DefaultStatus = item.DefaultStatus, ExcludeFromReports = item.ExcludeFromReports };
+        var clone = new LetterAgreementDealStatus { DealStatusCode = item.DealStatusCode, StatusName = item.StatusName, ExcludeFromReports = item.ExcludeFromReports };
         var parameters = new DialogParameters<LetterAgreementDealStatusDialog> 
         { 
             { x => x.Model, clone },
@@ -71,7 +72,6 @@
         if (result != null && !result.Canceled && result.Data is LetterAgreementDealStatus updatedModel)
         {
              item.StatusName = updatedModel.StatusName;
-             item.DefaultStatus = updatedModel.DefaultStatus;
              item.ExcludeFromReports = updatedModel.ExcludeFromReports;
              Repository.Update(item);
              await Repository.SaveChangesAsync();

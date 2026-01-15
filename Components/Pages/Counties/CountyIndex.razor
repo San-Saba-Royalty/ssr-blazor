@@ -40,7 +40,7 @@
 
 @code {
     private List<County> _counties = new();
-    private string _searchString;
+    private string _searchString = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,9 +76,8 @@
         var dialog = await DialogService.ShowAsync<CountyDialog>("Add County", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false, Data: County newCounty })
         {
-            var newCounty = (County)result.Data;
             try
             {
                 var createResult = await CountyService.CreateAsync(newCounty);
@@ -89,7 +88,7 @@
                 }
                 else
                 {
-                    Snackbar.Add(createResult.Error, Severity.Error);
+                    Snackbar.Add(createResult.Error ?? "Unknown error", Severity.Error);
                 }
             }
             catch (Exception ex)
@@ -114,8 +113,8 @@
         }
 
         bool? confirmed = await DialogService.ShowMessageBox(
-            "Warning", 
-            $"Are you sure you want to delete '{county.CountyName}'?", 
+            "Warning",
+            $"Are you sure you want to delete '{county.CountyName}'?",
             yesText: "Delete", cancelText: "Cancel");
 
         if (confirmed == true)
@@ -130,7 +129,7 @@
                 }
                 else
                 {
-                    Snackbar.Add(deleteResult.Error, Severity.Error);
+                    Snackbar.Add(deleteResult.Error ?? "Unknown error", Severity.Error);
                 }
             }
             catch (Exception ex)

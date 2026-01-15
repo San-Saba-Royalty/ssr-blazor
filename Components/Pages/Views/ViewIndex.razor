@@ -1,4 +1,4 @@
-@page "/views"
+@page "/tools/views"
 @using SSRBusiness.Entities
 @using SSRBlazor.Services
 @using SSRBlazor.Models
@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 @using MudBlazor
+
 
 <PageTitle>Data Views - San Saba Royalty</PageTitle>
 
@@ -88,6 +89,7 @@
     private bool _isAdding;
     private bool _processing;
     private string? _userId;
+    private Dictionary<string, bool> _toolbarActions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,6 +97,32 @@
         _userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         await LoadViewsAsync();
+        UpdateToolbarActions();
+    }
+
+    private void UpdateToolbarActions()
+    {
+        _toolbarActions[ActionCommands.TLB_NEW] = true;
+        _toolbarActions[ActionCommands.TLB_SAVE] = !string.IsNullOrWhiteSpace(_config.ViewName);
+        _toolbarActions[ActionCommands.TLB_DELETE] = _selectedViewId.HasValue && !_isAdding;
+        _toolbarActions[ActionCommands.TLB_FILTER] = true;
+    }
+
+    private async Task HandleToolbarActionAsync(string actionCommand)
+    {
+        switch (actionCommand)
+        {
+            case ActionCommands.TLB_NEW:
+                await SetupNewView();
+                break;
+            case ActionCommands.TLB_SAVE:
+                await SaveViewAsync();
+                break;
+            case ActionCommands.TLB_DELETE:
+                await DeleteViewAsync();
+                break;
+            // TLB_FILTER is handled by ActionService navigation
+        }
     }
 
     private async Task LoadViewsAsync()
@@ -104,6 +132,7 @@
         {
             await OnViewChanged(_selectedViewId);
         }
+        UpdateToolbarActions();
     }
 
     private async Task OnViewChanged(int? viewId)
@@ -123,6 +152,7 @@
         {
             _config = new ViewConfiguration();
         }
+        UpdateToolbarActions();
     }
 
     private async Task SetupNewView()
@@ -130,12 +160,14 @@
         _isAdding = true;
         _selectedViewId = null;
         _config = await ViewService.GetNewViewConfigurationAsync();
+        UpdateToolbarActions();
     }
 
     private void CancelAdd()
     {
         _isAdding = false;
         _config = new ViewConfiguration();
+        UpdateToolbarActions();
     }
 
     private async Task SaveViewAsync()

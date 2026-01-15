@@ -1,0 +1,201 @@
+@page "/county/data-index"
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using SSRBlazor.Services
+@inject CadTableRepository CadTableRepository
+@inject CadDataService CadDataService
+@inject ISnackbar Snackbar
+
+<PageTitle>Tax Roll Search</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Tax Roll Search</MudText>
+
+    <MudExpansionPanels Class="mb-4">
+        <MudExpansionPanel Text="Search Criteria" IsExpanded="true">
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSelect T="int" Label="CAD Table" @bind-Value="_selectedCadTableId" AnchorOrigin="Origin.BottomCenter">
+                         <MudSelectItem Value="0">All Tables</MudSelectItem>
+                        @foreach (var table in _cadTables)
+                        {
+                            <MudSelectItem Value="@table.CadTableID">@table.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.CountyNumber" Label="County Number" />
+                </MudItem>
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.RrcLease" Label="RRC Lease" />
+                </MudItem>
+                
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Owner" Label="Owner" />
+                </MudItem>
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Name" Label="Name" />
+                </MudItem>
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.LeaseName" Label="Lease Name" />
+                </MudItem>
+
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Abstract" Label="Abstract" />
+                </MudItem>
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Survey" Label="Survey" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Addr1" Label="Address" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.City" Label="City" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.St" Label="State" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.Zip5" Label="Zip" />
+                </MudItem>
+
+                 <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="_searchCriteria.OperatorName" Label="Operator" />
+                </MudItem>
+
+                <MudItem xs="12" Class="d-flex justify-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Reset" Class="mr-2">Reset</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Search" Disabled="@_isSearching">
+                        @if (_isSearching)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                            <MudText Class="ms-2">Searching</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Search</MudText>
+                        }
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <MudDataGrid Items="@_results" Filterable="true" SortMode="SortMode.Multiple">
+        <Columns>
+            <PropertyColumn Property="x => x.TableDisplayName" Title="Source" />
+            <PropertyColumn Property="x => x.CountyNumber" Title="County #" />
+            <PropertyColumn Property="x => x.RrcLease" Title="RRC Lease" />
+            <PropertyColumn Property="x => x.LeaseName" Title="Lease Name" />
+            <PropertyColumn Property="x => x.OperatorName" Title="Operator" />
+            <PropertyColumn Property="x => x.Owner" Title="Owner" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <PropertyColumn Property="x => x.FullAddress" Title="Address" />
+            <PropertyColumn Property="x => x.Abstract" Title="Abstract" />
+            <PropertyColumn Property="x => x.Survey" Title="Survey" />
+            <PropertyColumn Property="x => x.Interest" Title="Interest" />
+            <PropertyColumn Property="x => x.Value" Title="Value" />
+            <PropertyColumn Property="x => x.Acres" Title="Acres" />
+        </Columns>
+        <PagerContent>
+             <MudDataGridPager T="CadData" />
+        </PagerContent>
+    </MudDataGrid>
+
+</MudContainer>
+
+@code {
+    private List<CadTable> _cadTables = new();
+    private int _selectedCadTableId;
+    private CadData _searchCriteria = new();
+    private List<CadData> _results = new();
+    private bool _isSearching = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cadTables = await CadTableRepository.GetAllAsync();
+    }
+
+    private void Reset()
+    {
+        _searchCriteria = new CadData();
+        _results.Clear();
+        _selectedCadTableId = 0;
+    }
+
+    private async Task Search()
+    {
+        _isSearching = true;
+        _results.Clear();
+
+        try
+        {
+            // Determine which tables to search
+            List<CadTable> tablesToSearch = new();
+            if (_selectedCadTableId > 0)
+            {
+                var table = _cadTables.FirstOrDefault(t => t.CadTableID == _selectedCadTableId);
+                if (table != null) tablesToSearch.Add(table);
+            }
+            else
+            {
+                tablesToSearch.AddRange(_cadTables);
+            }
+
+            if (!tablesToSearch.Any())
+            {
+                Snackbar.Add("No CAD tables configured or selected.", Severity.Warning);
+                return;
+            }
+
+            // Perform search (could be parallelized)
+            // Legacy code did sequential search.
+            // We'll do it sequentially to avoid overwhelming db connections if they are the same server, 
+            // or we could parallelize. Let's start safely.
+            
+            // Note: CadDataRepository uses Microsoft.Data.SqlClient directly, which is synchronous in the implemented method.
+            // We should wrap it in Task.Run if we want to keep UI responsive, or update Repository to be Async.
+            // Since the Repository method is synchronous (ADO.NET), I'll wrap in Task.Run here.
+
+            await Task.Run(() =>
+            {
+                foreach (var table in tablesToSearch)
+                {
+                    try
+                    {
+                        var tableResults = CadDataService.Search(_searchCriteria, table.DisplayName, table.TableName, table.ConnectionString);
+                        lock (_results)
+                        {
+                            _results.AddRange(tableResults);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log or handle individual table failure?
+                        // Legacy showed "Unable to locate county data table"
+                         Console.WriteLine($"Error searching {table.DisplayName}: {ex.Message}");
+                    }
+                }
+            });
+
+            if (_results.Count == 0)
+            {
+                Snackbar.Add("No results found.", Severity.Info);
+            }
+            else 
+            {
+                Snackbar.Add($"Found {_results.Count} records.", Severity.Success);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Search failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+}

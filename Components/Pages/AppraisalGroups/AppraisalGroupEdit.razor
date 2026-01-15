@@ -1,0 +1,162 @@
+@page "/appraisal-groups/edit/{AppraisalGroupId:int}"
+@using SSRBusiness.Entities
+@using MudBlazor
+@using SSRBlazor.Services
+@using SSRBusiness.BusinessClasses
+@inject AppraisalGroupService AppraisalGroupService
+@inject LookUpService LookUpService
+@inject IActionService ActionService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h5" Class="mb-4">Edit Appraisal Group</MudText>
+
+<MudForm Model="@_appraisalGroup" @ref="_form">
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_appraisalGroup.AppraisalGroupName"
+                              Label="Appraisal Group Name"
+                              Required="true"
+                              RequiredError="Appraisal Group Name is required"
+                              MaxLength="50"
+                              Immediate="true" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_appraisalGroup.ContactName" Label="Contact Name" MaxLength="50" />
+            </MudItem>
+             <MudItem xs="12" sm="6">
+                 <MudTextField @bind-Value="_appraisalGroup.Attention" Label="Attention" MaxLength="50" />
+            </MudItem>
+
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_appraisalGroup.ContactEmail" Label="Contact Email" MaxLength="50" 
+                              Validation="@(new Func<string, IEnumerable<string>>(ValidateEmail))"/>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_appraisalGroup.ContactPhone" Label="Contact Phone" MaxLength="24" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_appraisalGroup.ContactFax" Label="Contact Fax" MaxLength="24" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_appraisalGroup.AddressLine1" Label="Address Line 1" MaxLength="50" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_appraisalGroup.AddressLine2" Label="Address Line 2" MaxLength="50" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_appraisalGroup.AddressLine3" Label="Address Line 3" MaxLength="50" />
+            </MudItem>
+
+            <MudItem xs="12" sm="5">
+                <MudTextField @bind-Value="_appraisalGroup.City" Label="City" MaxLength="30" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="State" @bind-Value="_appraisalGroup.StateCode" Required="true" RequiredError="State is required">
+                    <MudSelectItem Value="@("")">-- Select One --</MudSelectItem>
+                    @foreach (var state in _states)
+                    {
+                        <MudSelectItem Value="@state.StateCode">@state.StateName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_appraisalGroup.ZipCode" Label="Zip Code" MaxLength="10" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <div class="d-flex justify-end mt-4">
+        <MudButton OnClick="Delete" Variant="Variant.Outlined" Color="Color.Error" Class="mr-auto">Delete</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="mr-2">Cancel</MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary">Update Appraisal Group</MudButton>
+    </div>
+</MudForm>
+
+@code {
+    [Parameter] public int AppraisalGroupId { get; set; }
+
+    private AppraisalGroup _appraisalGroup = new();
+    private MudForm _form = default!;
+    private List<State> _states = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _states = await LookUpService.GetStatesAsync();
+        
+        var existing = await AppraisalGroupService.GetByIdAsync(AppraisalGroupId);
+        if (existing != null)
+        {
+            _appraisalGroup = existing;
+            // Update ActionState
+            ActionService.OnSaveRequested += Save;
+            ActionService.OnDeleteRequested += Delete;
+            ActionService.UpdateState(ActionState.Edit(false)); // Not dirty initially
+        }
+        else
+        {
+            Snackbar.Add("Appraisal Group not found", Severity.Error);
+            Navigation.NavigateTo("/appraisal-groups");
+        }
+    }
+
+    public void Dispose()
+    {
+        ActionService.OnSaveRequested -= Save;
+        ActionService.OnDeleteRequested -= Delete;
+    }
+
+    private IEnumerable<string> ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            yield break;
+        if (!email.Contains("@") || !email.Contains("."))
+            yield return "Invalid email address";
+    }
+
+    private async Task Save()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        try
+        {
+            await AppraisalGroupService.UpdateAsync(_appraisalGroup);
+            Snackbar.Add($"Appraisal Group '{_appraisalGroup.AppraisalGroupName}' has been successfully updated.", Severity.Success);
+            // Stay on page as per legacy behavior
+            // Or reload data to specific logic check
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating appraisal group: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task Delete()
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Warning", 
+            "Are you sure you want to delete this appraisal group?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await AppraisalGroupService.DeleteAsync(AppraisalGroupId);
+                Snackbar.Add($"Appraisal Group '{_appraisalGroup.AppraisalGroupName}' has been successfully deleted.", Severity.Success);
+                Navigation.NavigateTo("/appraisal-groups");
+            }
+            catch (Exception ex)
+            {
+                 Snackbar.Add($"Error deleting appraisal group: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/appraisal-groups");
+}

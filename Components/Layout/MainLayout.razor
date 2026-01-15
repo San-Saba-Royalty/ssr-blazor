@@ -16,45 +16,29 @@
 @* === MAIN LAYOUT CONTAINER === *@
 <MudLayout>
     
-    @* === APP BAR (contains the menu) === *@
-    <MudAppBar Elevation="1" Dense="true" Class="app-menu-bar">
-        <MainMenu />
-        <MudSpacer />
-        <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
-                       Color="Color.Inherit" 
-                       OnClick="@ThemeService.ToggleDarkMode" 
-                       title="Toggle Dark Mode" />
-        <AuthorizeView>
-            <Authorized Context="authState">
-                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <ActivatorContent>
-                        <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="mr-2">
-                            @GetUserInitials(authState.User.Identity?.Name)
-                        </MudAvatar>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudMenuItem>
-                            <MudText Typo="Typo.body2" Class="px-2">
-                                <strong>@authState.User.Identity?.Name</strong>
-                            </MudText>
-                        </MudMenuItem>
-                        <MudDivider />
-                        <MudMenuItem Href="/account/logout" Icon="@Icons.Material.Filled.Logout">
-                            Logout
-                        </MudMenuItem>
-                    </ChildContent>
-                </MudMenu>
-            </Authorized>
-            <NotAuthorized>
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/account/login">Login</MudButton>
-            </NotAuthorized>
-        </AuthorizeView>
-    </MudAppBar>
+    @* === TOP NAVIGATION === *@
+    <AuthorizeView>
+        <Authorized>
+            <div style="position: sticky; top: 0; z-index: 1300; width: 100%;">
+                <LegacyMenuBar />
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <MudAppBar Elevation="1" Dense="true" Class="app-menu-bar">
+                <MudSpacer />
+                <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                               Color="Color.Inherit" 
+                               OnClick="@ThemeService.ToggleDarkMode" 
+                               title="Toggle Dark Mode" />
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/account/login" Class="ml-4">Login</MudButton>
+            </MudAppBar>
+        </NotAuthorized>
+    </AuthorizeView>
     
-    @* === MAIN CONTENT (page body only) === *@
-    <MudMainContent Class="mt-16">
+    @* === MAIN CONTENT === *@
+    <MudMainContent>
         @* Page Body *@
-        <div class="page-content">
+        <div class="page-content pa-4">
             @Body
         </div>
     </MudMainContent>
@@ -86,5 +70,25 @@
 
         // Take first letter of first two parts (first name, last name)
         return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+    }
+
+    private bool ShouldShowToolbar()
+    {
+        // Show toolbar for authorized users
+        return true;
+    }
+
+    private string? GetCurrentModule()
+    {
+        // This would ideally be determined from the current route
+        // For now, return null as the toolbar component will handle defaults
+        return null;
+    }
+
+    private Dictionary<string, object>? GetActionParameters()
+    {
+        // Return any parameters needed for toolbar actions
+        // For now, return null as most actions don't need parameters
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 using MudBlazor.Services;
 using SSRBlazor.Components;
 using SSRBlazor;
+using SSRBusiness.BusinessClasses;
+using SSRBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

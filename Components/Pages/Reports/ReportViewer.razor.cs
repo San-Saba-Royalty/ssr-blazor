@@ -1,3 +1,4 @@
+#pragma warning disable CS8601, CS8629
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.JSInterop;

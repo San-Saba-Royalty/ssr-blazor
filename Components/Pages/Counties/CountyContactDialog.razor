@@ -1,5 +1,4 @@
 @using MudBlazor
-@using MudBlazor
 @using SSRBusiness.Entities
 
 <MudDialog>
@@ -44,6 +43,19 @@
                 <MudItem xs="6" sm="3">
                     <MudTextField @bind-Value="Contact.ZipCode" Label="Zip Code" MaxLength="10" />
                 </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTextField @bind-Value="Contact.ZipCode" Label="Zip Code" MaxLength="10" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                     <MudSelect T="int" Label="Document Template" @bind-Value="Contact.DocumentTemplateID" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="0">-- None --</MudSelectItem>
+                         @foreach (var template in DocumentTemplates)
+                         {
+                             <MudSelectItem Value="@template.DocumentTemplateID">@template.DocumentTemplateDesc</MudSelectItem>
+                         }
+                     </MudSelect>
+                </MudItem>
 
             </MudGrid>
         </MudForm>
@@ -57,6 +69,7 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     [Parameter] public CountyContact Contact { get; set; } = new();
+    [Parameter] public List<DocumentTemplate> DocumentTemplates { get; set; } = new();
 
     private MudForm _form = default!;
 

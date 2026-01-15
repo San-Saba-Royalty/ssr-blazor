@@ -1,3 +1,4 @@
+#pragma warning disable CS8602
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SSRBlazor.Services;
@@ -88,7 +89,7 @@ public partial class ReferrerEdit : ComponentBase
     {
         var parameters = new DialogParameters<ReferrerFormDialog> { { x => x.ReferrerId, ReferrerId } };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        
+
         var dialog = await DialogService.ShowAsync<ReferrerFormDialog>("Upload Form", parameters, options);
         var result = await dialog.Result;
 

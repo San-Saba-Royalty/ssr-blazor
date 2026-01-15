@@ -1,0 +1,14 @@
+@page "/documents/barcodes/check-statement"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Check Statement Barcode</MudText>
+        <MudAlert Severity="Severity.Info">This feature is currently under development.</MudAlert>
+        <MudText Class="mt-4">Barcode generation for Check Statements will be implemented here.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="@(() => _navigationManager.NavigateTo("/documents"))">Back to Documents</MudButton>
+    </MudPaper>
+</MudContainer>
+
+@inject NavigationManager _navigationManager

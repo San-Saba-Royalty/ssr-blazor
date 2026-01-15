@@ -1,0 +1,271 @@
+@using MudBlazor
+@using SSRBlazor.Models
+@using SSRBlazor.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject IActionService ActionService
+@inject ThemeService ThemeService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IDisposable
+
+<MudPaper Class="d-flex align-center gap-1 pa-1 legacy-menu-bar" Elevation="2" Square="true">
+    
+    @* === DROPDOWN MENUS === *@
+    
+    @* FILE MENU *@
+    <MudMenu Label="File" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem Label="New">
+            <MudMenu Label="New" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_ACQUISITION))">Acquisition</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_BUYER))">Buyer</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_COUNTY))">County</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_OPERATOR))">Operator</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_APPRAISALGROUP))">Appraisal Group</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_LETTERAGREEMENT))">Letter Agreement</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_NEW_REFERRER))">Referrer</MudMenuItem>
+            </MudMenu>
+        </MudMenuItem>
+        
+        <MudMenuItem Label="Display">
+            <MudMenu Label="Display" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_ACQUISITIONS))">Acquisitions</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_BUYERS))">Buyers</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_COUNTIES))">Counties</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_OPERATORS))">Operators</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_APPRAISALGROUPS))">Appraisal Groups</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_LETTERAGREEMENTS))">Letter Agreements</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_DISPLAY_REFERRERS))">Referrers</MudMenuItem>
+            </MudMenu>
+        </MudMenuItem>
+        
+        <MudDivider />
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_SAVE))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_SAVE))">Save</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_PRINT))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_PRINT))">Print</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_TAX_ROLL_SEARCH))">Tax Roll Search</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_GOTO_LAST_ACQ))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_GOTO_LAST_ACQ))">Goto Last Acquisition</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_GOTO_LAST_LETTERAGREEMENT))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_GOTO_LAST_LETTERAGREEMENT))">Goto Last Letter Agreement</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_GOTO_LAST_DOC_SEARCH))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_GOTO_LAST_DOC_SEARCH))">Goto Last Document Search</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_LOGOUT))">Logout</MudMenuItem>
+    </MudMenu>
+
+    @* EDIT MENU *@
+    <MudMenu Label="Edit" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_EDIT_COPY))" Disabled="@(!IsEnabled(ActionCommands.MNU_EDIT_COPY))">Copy</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_EDIT_DELETE))" Disabled="@(!IsEnabled(ActionCommands.MNU_EDIT_DELETE))">Delete</MudMenuItem>
+    </MudMenu>
+
+    @* REPORT MENU *@
+     <MudMenu Label="Report" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_CLOSING_REPORT))">Closing Report</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_DRAFTS_DUE))">Drafts Due</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_INVENTORY))">Inventory</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_BUYER_INVOICES_DUE))">Invoices Due</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_PURCHASES))">Purchases</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_MAP_DEED_PREP))">MAP Deed Prep</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_CURATIVE_REQUIREMENTS))">Curative Requirements</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_LETTER_AGREEMENT_DEALS))">Letter Agreement Deals</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_REPORT_REFERRER_1099_SUMMARY))">Referrer 1099 Summary</MudMenuItem>
+    </MudMenu>
+
+    @* DOCUMENTS MENU *@
+    <MudMenu Label="Documents" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_TEMPLATES))">Templates</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_BARCODE_ACQUISITION_DOCUMENT))">Generate Acquisition Cover Sheet</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_BARCODE_CHECK_STATEMENT))">Generate Check Statement Cover Sheet</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_SEARCH))">Search</MudMenuItem>
+    </MudMenu>
+
+    @* VIEW MENU *@
+    <MudMenu Label="View" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_VIEW_LIST))" Disabled="@(!IsEnabled(ActionCommands.MNU_VIEW_LIST))">List</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_VIEW_FORM))" Disabled="@(!IsEnabled(ActionCommands.MNU_VIEW_FORM))">Form</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem>
+             <MudMenu Label="Apply Filter" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_VIEW_APPLY_FILTER_ALL_RECORDS))">All Records</MudMenuItem>
+             </MudMenu>
+        </MudMenuItem>
+        <MudMenuItem>
+              <MudMenu Label="Apply View" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_VIEW_APPLY_VIEW_ALL_FIELDS))">All Fields</MudMenuItem>
+             </MudMenu>
+        </MudMenuItem>
+    </MudMenu>
+
+    @* TOOLS MENU *@
+    <MudMenu Label="Tools" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_FILTERS))">Filters</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_VIEWS))">Views</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_LIEN_TYPES))">Lien Types</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_CURATIVE_TYPES))">Curative Types</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_DEAL_STATUSES))">Deal Statuses</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_LETTERAGREEMENT_DEAL_STATUSES))">Letter Agreement Deal Statuses</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_FOLDER_LOCATIONS))">Folder Locations</MudMenuItem>
+    </MudMenu>
+
+    @* ADMINISTRATION MENU *@
+    <MudMenu Label="Administration" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
+        <MudMenuItem Label="New">
+             <MudMenu Label="New" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_ADMINISTRATION_NEW_USER))">User</MudMenuItem>
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_ADMINISTRATION_NEW_ROLE))">Role</MudMenuItem>
+             </MudMenu>
+        </MudMenuItem>
+        <MudMenuItem Label="Display">
+             <MudMenu Label="Display" Dense="true" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft">
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_ADMINISTRATION_DISPLAY_USERS))">Users</MudMenuItem>
+                 <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_ADMINISTRATION_DISPLAY_ROLES))">Roles</MudMenuItem>
+             </MudMenu>
+        </MudMenuItem>
+        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_ADMINISTRATION_EDIT_USER))">Edit User</MudMenuItem>
+    </MudMenu>
+
+    <MudSpacer />
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+    <MudSpacer />
+
+    @* === TOOLBAR ICONS === *@
+    
+    <MudTooltip Text="New">
+        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_NEW))" Disabled="@(!IsEnabled(ActionCommands.TLB_NEW))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Save">
+        <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_SAVE))" Disabled="@(!IsEnabled(ActionCommands.TLB_SAVE))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Print">
+        <MudIconButton Icon="@Icons.Material.Filled.Print" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_PRINT))" Disabled="@(!IsEnabled(ActionCommands.TLB_PRINT))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Copy">
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_COPY))" Disabled="@(!IsEnabled(ActionCommands.TLB_COPY))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Delete">
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_DELETE))" Disabled="@(!IsEnabled(ActionCommands.TLB_DELETE))" />
+    </MudTooltip>
+    
+     <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+    <MudTooltip Text="List">
+        <MudIconButton Icon="@Icons.Material.Filled.TableView" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_LIST))" Disabled="@(!IsEnabled(ActionCommands.TLB_LIST))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Form">
+        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_FORM))" Disabled="@(!IsEnabled(ActionCommands.TLB_FORM))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="Filter">
+        <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_FILTER))" Disabled="@(!IsEnabled(ActionCommands.TLB_FILTER))" />
+    </MudTooltip>
+    
+    <MudTooltip Text="View">
+        <MudIconButton Icon="@Icons.Material.Filled.ViewModule" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_VIEW))" Disabled="@(!IsEnabled(ActionCommands.TLB_VIEW))" />
+    </MudTooltip>
+
+     <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+     
+    @if (IsEnabled(ActionCommands.TLB_BACK))
+    {
+        <MudTooltip Text="Goto Last Acquisition">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_BACK))" />
+        </MudTooltip>
+    }
+    
+    @if (IsEnabled(ActionCommands.TLB_BACK_LETTERAGREEMENT))
+    {
+         <MudTooltip Text="Goto Last Letter Agreement">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="@(() => Execute(ActionCommands.TLB_BACK_LETTERAGREEMENT))" />
+        </MudTooltip>
+    }
+
+    <MudSpacer />
+    
+    @* === THEME TOGGLE === *@
+    <MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                   Color="Color.Inherit" 
+                   OnClick="@ThemeService.ToggleDarkMode" 
+                   title="Toggle Dark Mode" />
+
+</MudPaper>
+
+<style>
+    .legacy-menu-bar {
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        z-index: 1200; /* Ensure strictly above content */
+        position: relative;
+    }
+    
+    /* Simulate legacy font size */
+    .mud-menu-content {
+        font-size: 0.85rem;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        ActionService.OnStateChange += HandleStateChange;
+        ThemeService.OnChange += HandleStateChange;
+
+        // Initialize ActionService with current user data
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                // Attempt to get UserId from claims
+                // Assuming "sub" or NameIdentifier or custom "UserId" claim
+                var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier) ?? 
+                                  user.FindFirst("sub") ??
+                                  user.FindFirst("UserId");
+
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    await ActionService.InitializeAsync(userId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing menu bar: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        ActionService.OnStateChange -= HandleStateChange;
+        ThemeService.OnChange -= HandleStateChange;
+    }
+
+    private void HandleStateChange()
+    {
+        StateHasChanged();
+    }
+
+    private bool IsEnabled(string command)
+    {
+        return ActionService.IsActionEnabled(command);
+    }
+
+    private async Task Execute(string command)
+    {
+        var result = await ActionService.ExecuteActionAsync(command);
+        
+        if (result.Success && !string.IsNullOrEmpty(result.NavigateToUrl))
+        {
+            NavigationManager.NavigateTo(result.NavigateToUrl);
+        }
+        else if (!result.Success)
+        {
+            // TODO: Show Snackbar
+            Console.WriteLine($"Action failed: {result.Message}");
+        }
+    }
+}

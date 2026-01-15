@@ -1,3 +1,4 @@
+#pragma warning disable CS8602
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SSRBusiness.Entities;

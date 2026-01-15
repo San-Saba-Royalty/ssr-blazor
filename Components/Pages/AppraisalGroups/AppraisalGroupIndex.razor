@@ -5,6 +5,8 @@
 @inject AppraisalGroupService AppraisalGroupService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IActionService ActionService
 
 <PageTitle>Appraisal Groups</PageTitle>
 
@@ -46,6 +48,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        ActionService.UpdateState(ActionState.Index);
     }
 
     private async Task LoadData()
@@ -70,49 +73,14 @@
         return false;
     };
 
-    private async Task AddAppraisalGroup()
+    private void AddAppraisalGroup()
     {
-        var parameters = new DialogParameters();
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<AppraisalGroupDialog>("Add Appraisal Group", parameters, options);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false, Data: AppraisalGroup newGroup })
-        {
-            try 
-            {
-                await AppraisalGroupService.AddAsync(newGroup);
-                Snackbar.Add("Appraisal Group added", Severity.Success);
-                await LoadData();
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Error adding group: {ex.Message}", Severity.Error);
-            }
-        }
+        Navigation.NavigateTo("/appraisal-groups/add");
     }
 
-    private async Task EditAppraisalGroup(AppraisalGroup group)
+    private void EditAppraisalGroup(AppraisalGroup group)
     {
-        var parameters = new DialogParameters { ["AppraisalGroup"] = group };
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<AppraisalGroupDialog>("Edit Appraisal Group", parameters, options);
-        var result = await dialog.Result;
-
-        if (result is { Canceled: false, Data: AppraisalGroup updatedGroup })
-        {
-            try
-            {
-                await AppraisalGroupService.UpdateAsync(updatedGroup);
-                Snackbar.Add("Appraisal Group updated", Severity.Success);
-                await LoadData();
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Error updating group: {ex.Message}", Severity.Error);
-                await LoadData(); // Reload to reset state
-            }
-        }
+        Navigation.NavigateTo($"/appraisal-groups/edit/{group.AppraisalGroupID}");
     }
 
     private async Task DeleteAppraisalGroup(AppraisalGroup group)

@@ -1,0 +1,69 @@
+@using SSRBusiness.Entities
+@using SSRBlazor.Services
+@inject AppraisalGroupService AppraisalGroupService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Model" @ref="_form">
+            <MudSelect T="int" Label="Appraisal Group" @bind-Value="Model.AppraisalGroupID" Required="true" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var group in _appraisalGroups)
+                {
+                    <MudSelectItem Value="@group.AppraisalGroupID">@group.AppraisalGroupName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudDatePicker Label="Effective Date" @bind-Date="_effectiveDate" Required="true" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    // We use a simplified model or the actual entity. 
+    // Since CountyAppraisalGroup requires an object reference for navigation props in some contexts,
+    // we'll just bind to the Entity but ensure we set IDs correctly.
+    [Parameter] public CountyAppraisalGroup Model { get; set; } = new();
+
+    private MudForm _form = default!;
+    private List<AppraisalGroup> _appraisalGroups = new();
+    
+    // Proxy property to handle DateTime? binding for MudDatePicker
+    private DateTime? _effectiveDate
+    {
+        get => Model.EffectiveDate;
+        set => Model.EffectiveDate = value ?? DateTime.Today;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _appraisalGroups = await AppraisalGroupService.GetAllAsync();
+        
+        // Default to today if new
+        if (Model.CountyAppraisalGroupID == 0 && Model.EffectiveDate == default)
+        {
+            Model.EffectiveDate = DateTime.Today;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+             // Check if AppraisalGroupID is selected
+             if (Model.AppraisalGroupID == 0)
+             {
+                 // Should be caught by Required=true but double check
+                 return;
+             }
+
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

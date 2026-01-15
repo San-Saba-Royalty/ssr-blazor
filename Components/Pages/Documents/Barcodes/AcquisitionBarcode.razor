@@ -1,0 +1,14 @@
+@page "/documents/barcodes/acquisition"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Acquisition Barcode</MudText>
+        <MudAlert Severity="Severity.Info">This feature is currently under development.</MudAlert>
+        <MudText Class="mt-4">Barcode generation for Acquisition Documents will be implemented here.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="@(() => _navigationManager.NavigateTo("/documents"))">Back to Documents</MudButton>
+    </MudPaper>
+</MudContainer>
+
+@inject NavigationManager _navigationManager

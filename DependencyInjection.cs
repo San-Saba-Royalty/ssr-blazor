@@ -59,6 +59,12 @@ public static class DependencyInjection
         services.AddScoped<CountyRepository>();
         services.AddScoped<FilterRepository>();
         services.AddScoped<FilterFieldRepository>();
+        
+        // County/CAD Data Repositories
+        services.AddScoped<CountyAppraisalGroupRepository>();
+        services.AddScoped<CadTableRepository>();
+        services.AddScoped<CadDataRepository>();
+        services.AddScoped<CadDataService>();
 
         // Register System Lookup Repositories
         services.AddScoped<LienTypeRepository>();
@@ -97,6 +103,7 @@ public static class DependencyInjection
             .AddScoped<CachedDataService<Referrer>>();
 
         // Register application services
+        services.AddScoped<IActionService, ActionService>();
         services.AddScoped<AcquisitionService>();
         services.AddScoped<BuyerService>();
         services.AddScoped<BuyerContactService>();

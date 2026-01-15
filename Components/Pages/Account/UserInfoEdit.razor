@@ -1,4 +1,4 @@
-@page "/account/profile"
+@page "/account/user-info"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @using Microsoft.AspNetCore.Components.Web
@@ -6,12 +6,15 @@
 @using MudBlazor
 @using SSRBusiness.Entities
 @using SSRBusiness.BusinessClasses
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject UserRepository UserRepository
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudText Typo="Typo.h4" GutterBottom="true">My Profile</MudText>
+    <MudText Typo="Typo.h4" GutterBottom="true">Edit User Information</MudText>
 
     @if (_loading)
     {
@@ -28,7 +31,7 @@
                         <MudCardContent>
                             <MudGrid>
                                 <MudItem xs="12" sm="6">
-                                    <MudTextField Label="User ID" @bind-Value="User.UserId" 
+                                    <MudTextField Label="User Name" @bind-Value="User.UserName" 
                                                   Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="true" />
                                 </MudItem>
 
@@ -45,6 +48,16 @@
                                     <MudTextField Label="Last Name" @bind-Value="User.LastName" 
                                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
                                 </MudItem>
+                                
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="Title" @bind-Value="User.Title" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField Label="Phone Number" @bind-Value="User.PhoneNumber" 
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
 
                                 <MudItem xs="12">
                                      <MudText Typo="Typo.subtitle1" Class="mt-4">Change Password (Optional)</MudText>
@@ -55,7 +68,7 @@
                             </MudGrid>
                         </MudCardContent>
                         <MudCardActions Class="pb-4 pl-4">
-                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Update Profile</MudButton>
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Update User</MudButton>
                             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
                         </MudCardActions>
                     </MudCard>
@@ -77,28 +90,28 @@
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        // In a real app, get ID from AuthenticationState
-        // For the porting exercise, we'll placeholder this or check if a session cookie exists in a full implement
-        // We will assume "current user" logic needs strictly Authenticated state.
-        // For demo/porting without AuthState, we might default to a specific user or show empty
-        // I'll leave it attempting to fetch, but since I can't get current user easily without AuthState, 
-        // I will redirect to login if not available in a real scenario.
-        
-        // MOCK:
-        // User = await UserRepository.LoadUserByUserIdAsync("current_user");
-        
-        // Since I can't know the user, I'll simulate a failure/redirect to login
-        // But to satisfy the "Port" requirement, I'll assume standard flow code:
-        /*
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if(user.Identity.IsAuthenticated) {
-             var id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-             User = await UserRepository.LoadUserByUserIdAsync(id);
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userPrincipal = authState.User;
+
+            if (userPrincipal.Identity != null && userPrincipal.Identity.IsAuthenticated)
+            {
+                var userIdClaim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    User = await UserRepository.LoadUserByUserIdAsync(userId);
+                }
+            }
         }
-        */
-        
-        _loading = false;
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading user profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task HandleValidSubmit()
@@ -120,11 +133,11 @@
                      await UserRepository.SaveChangesAsync();
                 }
 
-                Snackbar.Add("Profile updated successfully!", Severity.Success);
+                Snackbar.Add("User information updated successfully!", Severity.Success);
             }
             catch(Exception ex)
             {
-                Snackbar.Add($"Error updating profile: {ex.Message}", Severity.Error);
+                Snackbar.Add($"Error updating user information: {ex.Message}", Severity.Error);
             }
         }
     }
