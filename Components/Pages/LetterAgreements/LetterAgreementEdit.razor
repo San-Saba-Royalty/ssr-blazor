@@ -529,10 +529,42 @@
 
             @* DOCUMENTS TAB *@
             <MudTabPanel Text="Documents" Icon="@Icons.Material.Filled.Folder">
-                <MudAlert Severity="Severity.Info">
-                    Document management will be available after DocuShare integration is complete.
-                </MudAlert>
+                @if (Id.HasValue)
+                {
+                    <MudStack Spacing="4">
+                        <MudText Typo="Typo.body1">
+                            Generate and manage Letter Agreement documents.
+                        </MudText>
+                        
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Description"
+                                       OnClick="@(() => NavigationManager.NavigateTo($"/letteragreements/{Id}/documents"))">
+                                Open Document Manager
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       OnClick="GenerateLetterAgreementDocument">
+                                Quick Generate Letter Agreement
+                            </MudButton>
+                        </MudStack>
+                        
+                        <MudText Typo="Typo.caption">
+                            The Document Manager allows you to select signing partners, choose state-specific templates (TX/LA), 
+                            and generate Letter Agreements, Conveyances, and Exhibit A documents.
+                        </MudText>
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        Please save the Letter Agreement before generating documents.
+                    </MudAlert>
+                }
             </MudTabPanel>
+
 
             @* AUDIT HISTORY TAB (Admin Only) *@
             <AuthorizeView Roles="Administrator" Context="authContext">

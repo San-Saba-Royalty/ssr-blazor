@@ -12,9 +12,8 @@ namespace SSRBlazor.Services;
 /// </summary>
 public class AcquisitionService
 {
-    private readonly AcquisitionRepository _repository;
+    private readonly IDbContextFactory<SsrDbContext> _contextFactory;
     private readonly CachedDataService<Acquisition> _cachedDataService;
-    private readonly SsrDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<AcquisitionService> _logger;
 
@@ -24,15 +23,13 @@ public class AcquisitionService
     private const string ViewsCacheKey = $"{CacheKeyPrefix}_Views";
 
     public AcquisitionService(
-        AcquisitionRepository repository,
+        IDbContextFactory<SsrDbContext> contextFactory,
         CachedDataService<Acquisition> cachedDataService,
-        SsrDbContext context,
         IMemoryCache cache,
         ILogger<AcquisitionService> logger)
     {
-        _repository = repository;
+        _contextFactory = contextFactory;
         _cachedDataService = cachedDataService;
-        _context = context;
         _cache = cache;
         _logger = logger;
     }
@@ -49,7 +46,9 @@ public class AcquisitionService
     {
         try
         {
-            var allAcquisitions = await _repository.GetAcquisitionListAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionRepository(context);
+            var allAcquisitions = await repository.GetAcquisitionListAsync();
 
             // Apply named filter
             var filtered = ApplyNamedFilter(allAcquisitions, activeFilter);
@@ -105,8 +104,10 @@ public class AcquisitionService
     {
         try
         {
-            await _repository.AddAsync(acquisition);
-            await _repository.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionRepository(context);
+            await repository.AddAsync(acquisition);
+            await repository.SaveChangesAsync();
 
             InvalidateCache();
 
@@ -127,8 +128,10 @@ public class AcquisitionService
     {
         try
         {
-            _repository.Update(acquisition);
-            await _repository.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionRepository(context);
+            repository.Update(acquisition);
+            await repository.SaveChangesAsync();
 
             InvalidateCache(acquisition.AcquisitionID);
 
@@ -148,11 +151,13 @@ public class AcquisitionService
     {
         try
         {
-            var acquisition = await _repository.GetByIdAsync(acquisitionId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionRepository(context);
+            var acquisition = await repository.GetByIdAsync(acquisitionId);
             if (acquisition != null)
             {
-                _repository.Delete(acquisition);
-                await _repository.SaveChangesAsync();
+                repository.Delete(acquisition);
+                await repository.SaveChangesAsync();
 
                 InvalidateCache(acquisitionId);
 
@@ -173,10 +178,13 @@ public class AcquisitionService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionRepository(context);
+            
             options ??= new AcquisitionCopyOptions();
 
             // Load full graph
-            var source = await _repository.LoadAcquisitionByAcquisitionIDAsync(acquisitionId);
+            var source = await repository.LoadAcquisitionByAcquisitionIDAsync(acquisitionId);
             if (source == null)
             {
                 throw new InvalidOperationException($"Acquisition {acquisitionId} not found");
@@ -232,16 +240,16 @@ public class AcquisitionService
                 FolderLocation = source.FolderLocation
             };
 
-            await _repository.AddAsync(copy);
+            await repository.AddAsync(copy);
             // Must save to get ID before adding children that need FK, though EF usually handles it if adding to collections.
             // But here we are manually creating new entities and they might reference copy.AcquisitionID explicitly.
-            await _repository.SaveChangesAsync();
+            await repository.SaveChangesAsync();
 
             if (options.CopySellerInformation && source.AcquisitionSellers != null)
             {
                 foreach (var seller in source.AcquisitionSellers)
                 {
-                    _context.AcquisitionSellers.Add(new AcquisitionSeller
+                    context.AcquisitionSellers.Add(new AcquisitionSeller
                     {
                         AcquisitionID = copy.AcquisitionID,
                         SellerName = seller.SellerName,
@@ -264,7 +272,7 @@ public class AcquisitionService
             {
                 foreach (var item in source.AcquisitionCounties)
                 {
-                    _context.AcquisitionCounties.Add(new AcquisitionCounty
+                    context.AcquisitionCounties.Add(new AcquisitionCounty
                     {
                         AcquisitionID = copy.AcquisitionID,
                         CountyID = item.CountyID,
@@ -280,7 +288,7 @@ public class AcquisitionService
             {
                 foreach (var item in source.AcquisitionOperators)
                 {
-                    _context.AcquisitionOperators.Add(new AcquisitionOperator
+                    context.AcquisitionOperators.Add(new AcquisitionOperator
                     {
                         AcquisitionID = copy.AcquisitionID,
                         OperatorID = item.OperatorID,
@@ -295,7 +303,7 @@ public class AcquisitionService
             {
                 foreach (var item in source.AcquisitionNotes)
                 {
-                    _context.AcquisitionNotes.Add(new AcquisitionNote
+                    context.AcquisitionNotes.Add(new AcquisitionNote
                     {
                         AcquisitionID = copy.AcquisitionID,
                         NoteText = item.NoteText,
@@ -356,7 +364,7 @@ public class AcquisitionService
                         }
                     }
 
-                    _context.AcquisitionUnits.Add(newUnit);
+                    context.AcquisitionUnits.Add(newUnit);
                 }
             }
 
@@ -364,7 +372,7 @@ public class AcquisitionService
             {
                 foreach (var item in source.AcquisitionLiens)
                 {
-                    _context.AcquisitionLiens.Add(new AcquisitionLien
+                    context.AcquisitionLiens.Add(new AcquisitionLien
                     {
                         AcquisitionID = copy.AcquisitionID,
                         LienHolder = item.LienHolder,
@@ -408,7 +416,9 @@ public class AcquisitionService
     /// </summary>
     public async Task<byte[]> ExportToExcelAsync(string? activeFilter = null)
     {
-        var allAcquisitions = await _repository.GetAcquisitionListAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var repository = new AcquisitionRepository(context);
+        var allAcquisitions = await repository.GetAcquisitionListAsync();
         var filtered = ApplyNamedFilter(allAcquisitions, activeFilter);
 
         // Use a library like ClosedXML or EPPlus to generate Excel

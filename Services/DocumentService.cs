@@ -12,9 +12,8 @@ namespace SSRBlazor.Services;
 /// </summary>
 public class DocumentService
 {
-    private readonly DocumentTemplateRepository _repository;
+    private readonly IDbContextFactory<SsrDbContext> _contextFactory;
     private readonly CachedDataService<DocumentTemplate> _cachedDataService;
-    private readonly SsrDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<DocumentService> _logger;
 
@@ -23,15 +22,13 @@ public class DocumentService
     private const string DocumentTypesCacheKey = $"{CacheKeyPrefix}_Types";
 
     public DocumentService(
-        DocumentTemplateRepository repository,
+        IDbContextFactory<SsrDbContext> contextFactory,
         CachedDataService<DocumentTemplate> cachedDataService,
-        SsrDbContext context,
         IMemoryCache cache,
         ILogger<DocumentService> logger)
     {
-        _repository = repository;
+        _contextFactory = contextFactory;
         _cachedDataService = cachedDataService;
-        _context = context;
         _cache = cache;
         _logger = logger;
     }
@@ -48,7 +45,9 @@ public class DocumentService
     {
         try
         {
-            var query = await _repository.GetDocumentTemplatesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new DocumentTemplateRepository(context);
+            var query = await repository.GetDocumentTemplatesAsync();
 
             // Apply document type filter
             if (!string.IsNullOrEmpty(documentTypeCode))
@@ -109,7 +108,9 @@ public class DocumentService
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
 
-            var query = await _repository.GetDocumentTemplatesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new DocumentTemplateRepository(context);
+            var query = await repository.GetDocumentTemplatesAsync();
 
             var types = await query
                 .Select(d => d.DocumentTypeCode)
@@ -140,8 +141,10 @@ public class DocumentService
     {
         try
         {
-            await _repository.AddAsync(documentTemplate);
-            await _repository.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new DocumentTemplateRepository(context);
+            await repository.AddAsync(documentTemplate);
+            await repository.SaveChangesAsync();
 
             InvalidateCache();
 
@@ -162,17 +165,20 @@ public class DocumentService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new DocumentTemplateRepository(context);
+
             // Handle CustomFields: Delete existing and add new
             // Note: This relies on the context tracking or explicitly loading them. 
             // Since we use a repository pattern and disconnected entities (likely coming from Blazor), 
             // we need to be careful.
 
             // Get existing entity with tracked custom fields
-            var existing = await _repository.GetByIdAsync(documentTemplate.DocumentTemplateID);
+            var existing = await repository.GetByIdAsync(documentTemplate.DocumentTemplateID);
             if (existing != null)
             {
                 // Update scalar properties
-                _context.Entry(existing).CurrentValues.SetValues(documentTemplate);
+                context.Entry(existing).CurrentValues.SetValues(documentTemplate);
 
                 // Update Custom Fields
                 // Clear existing
@@ -184,15 +190,15 @@ public class DocumentService
                     existing.CustomFields.Add(cf);
                 }
 
-                await _repository.SaveChangesAsync();
+                await repository.SaveChangesAsync();
                 InvalidateCache(documentTemplate.DocumentTemplateID);
                 _logger.LogInformation("Updated document template {DocumentTemplateId} and custom fields", documentTemplate.DocumentTemplateID);
             }
             else
             {
                 // Fallback if not found, though realistically it should exist
-                _repository.Update(documentTemplate);
-                await _repository.SaveChangesAsync();
+                repository.Update(documentTemplate);
+                await repository.SaveChangesAsync();
                 InvalidateCache(documentTemplate.DocumentTemplateID);
             }
 
@@ -211,11 +217,13 @@ public class DocumentService
     {
         try
         {
-            var documentTemplate = await _repository.GetByIdAsync(documentTemplateId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new DocumentTemplateRepository(context);
+            var documentTemplate = await repository.GetByIdAsync(documentTemplateId);
             if (documentTemplate != null)
             {
-                _repository.Delete(documentTemplate);
-                await _repository.SaveChangesAsync();
+                repository.Delete(documentTemplate);
+                await repository.SaveChangesAsync();
 
                 InvalidateCache(documentTemplateId);
 
@@ -234,8 +242,10 @@ public class DocumentService
     /// </summary>
     public async Task<bool> HasAssociatedDocumentsAsync(int documentTemplateId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var repository = new DocumentTemplateRepository(context);
         // Check if there is a file location or DocuSign file ID
-        var template = await _repository.GetByIdAsync(documentTemplateId);
+        var template = await repository.GetByIdAsync(documentTemplateId);
         return template != null &&
                (!string.IsNullOrEmpty(template.DocumentTemplateLocation) ||
                 !string.IsNullOrEmpty(template.DSFileID));
@@ -250,7 +260,9 @@ public class DocumentService
     /// <returns>True if description exists</returns>
     public async Task<bool> DoesTemplateDescriptionExistAsync(string documentTypeCode, string description, int? excludeId = null)
     {
-        var query = _repository.Query()
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var repository = new DocumentTemplateRepository(context);
+        var query = repository.Query()
             .Where(t => t.DocumentTypeCode == documentTypeCode &&
                         t.DocumentTemplateDesc == description);
 
@@ -271,7 +283,9 @@ public class DocumentService
     /// <returns>True if file exists</returns>
     public async Task<bool> DoesTemplateFileExistAsync(string documentTypeCode, string fileName, int? excludeId = null)
     {
-        var query = _repository.Query()
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var repository = new DocumentTemplateRepository(context);
+        var query = repository.Query()
             .Where(t => t.DocumentTypeCode == documentTypeCode &&
                         t.DocumentTemplateLocation != null &&
                         t.DocumentTemplateLocation.ToUpper() == fileName.ToUpper());
@@ -291,19 +305,20 @@ public class DocumentService
     /// <returns>True if documents exist for this template</returns>
     public async Task<bool> DoDocumentsExistForTemplateAsync(int documentTemplateId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         // Check if any contact entities reference this template
         // The template could be used by CountyContact, OperatorContact, or BuyerContact
-        var countyExists = await _context.CountyContacts
+        var countyExists = await context.CountyContacts
             .AnyAsync(c => c.DocumentTemplateID == documentTemplateId);
 
         if (countyExists) return true;
 
-        var operatorExists = await _context.OperatorContacts
+        var operatorExists = await context.OperatorContacts
             .AnyAsync(c => c.DocumentTemplateID == documentTemplateId);
 
         if (operatorExists) return true;
 
-        var buyerExists = await _context.BuyerContacts
+        var buyerExists = await context.BuyerContacts
             .AnyAsync(c => c.DocumentTemplateID == documentTemplateId);
 
         return buyerExists;
@@ -323,7 +338,9 @@ public class DocumentService
     /// </summary>
     public async Task<byte[]> ExportToExcelAsync(string? documentTypeCode = null)
     {
-        var query = await _repository.GetDocumentTemplatesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var repository = new DocumentTemplateRepository(context);
+        var query = await repository.GetDocumentTemplatesAsync();
 
         if (!string.IsNullOrEmpty(documentTypeCode))
         {

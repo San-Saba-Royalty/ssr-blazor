@@ -648,6 +648,22 @@ public partial class LetterAgreementEdit : ComponentBase
     }
 
     #endregion
+
+    #region Document Generation
+
+    private async Task GenerateLetterAgreementDocument()
+    {
+        if (!Id.HasValue)
+        {
+            Snackbar.Add("Please save the Letter Agreement first.", Severity.Warning);
+            return;
+        }
+
+        // Navigate to the Documents page for full generation options
+        NavigationManager.NavigateTo($"/letteragreements/{Id.Value}/documents");
+    }
+
+    #endregion
 }
 
 // Helper classes

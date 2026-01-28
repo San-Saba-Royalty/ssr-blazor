@@ -4,12 +4,15 @@
 @using MudBlazor
 @using SSRBusiness.Entities
 @using SSRBlazor.Services
+@using SSRBusiness.Interfaces
 
 @inject DocumentService DocumentService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ViewService ViewService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Document Templates</PageTitle>
 
@@ -33,6 +36,29 @@
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
         <MudText Typo="Typo.h6">Documents</MudText>
         
+        <MudDivider Vertical="true" FlexItem="true" />
+        
+        <MudDivider Vertical="true" FlexItem="true" />
+
+        @* View Selection *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.body2"><strong>View:</strong></MudText>
+            <MudSelect T="int?"
+                       Value="@_selectedViewId"
+                       ValueChanged="@OnViewSelected"
+                       Dense="true"
+                       Variant="Variant.Outlined"
+                       Style="min-width: 200px">
+                @foreach (var view in _availableViews)
+                {
+                    <MudSelectItem Value="@((int?)view.ViewID)">@view.ViewName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudIconButton Icon="@Icons.Material.Filled.ViewColumn"
+                           OnClick="@OpenColumnOrdering"
+                           Title="Customize Columns" />
+        </MudStack>
+
         <MudDivider Vertical="true" FlexItem="true" />
         
         @* Document Type Filter *@
@@ -123,12 +149,13 @@
         <Columns>
             @* Document Template ID - Hidden *@
             <PropertyColumn Property="x => x.DocumentTemplateID" Title="ID" 
-                            Hidden="true"
+                            Hidden="@(!IsColumnVisible("ID"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 60px;" />
             
             @* Document Type Code *@
             <PropertyColumn Property="x => x.DocumentTypeCode" Title="Type" 
+                            Hidden="@(!IsColumnVisible("Type"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 150px;">
                 <FooterTemplate>
@@ -138,11 +165,13 @@
             
             @* Document Template Description *@
             <PropertyColumn Property="x => x.DocumentTemplateDesc" Title="Template Description" 
+                            Hidden="@(!IsColumnVisible("Description"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 600px;" />
             
             @* Document Link *@
             <TemplateColumn Title="Document" 
+                            Hidden="@(!IsColumnVisible("Location"))"
                             Sortable="false" Filterable="false"
                             HeaderStyle="width: 100px;">
                 <CellTemplate>

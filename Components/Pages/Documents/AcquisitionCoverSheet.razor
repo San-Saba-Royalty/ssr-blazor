@@ -1,0 +1,218 @@
+@page "/documents/cover-sheet/acquisition"
+@using MudBlazor
+@using SSRBusiness.BusinessClasses
+@using SSRBusiness.Entities
+@using SSRBusiness.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<SsrDbContext> DbContextFactory
+@inject CoverSheetService CoverSheetService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Generate Acquisition Cover Sheet</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">Generate Acquisition Cover Sheet</MudText>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4">@_successMessage</MudAlert>
+        }
+
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_acquisitionId" 
+                          Label="Acquisition ID" 
+                          Required="true"
+                          RequiredError="Acquisition ID is required"
+                          Variant="Variant.Outlined"
+                          Class="mb-3" />
+
+            <MudSelect @bind-Value="_documentType" 
+                       Label="Document Type" 
+                       Required="true"
+                       RequiredError="Document type is required"
+                       Variant="Variant.Outlined"
+                       Class="mb-3">
+                <MudSelectItem Value="@string.Empty">-- Select One --</MudSelectItem>
+                @foreach (var docType in _documentTypes)
+                {
+                    <MudSelectItem Value="@docType.DocumentTypeCode">@docType.DocumentTypeDesc</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="_description" 
+                          Label="Description" 
+                          Required="true"
+                          RequiredError="Description is required"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          Class="mb-3" />
+
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="GenerateCoverSheet"
+                           Disabled="_isGenerating">
+                    @if (_isGenerating)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Generating...</span>
+                    }
+                    else
+                    {
+                        <span>Generate</span>
+                    }
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Default" 
+                           OnClick="Cancel">
+                    Cancel
+                </MudButton>
+            </MudStack>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private string _acquisitionId = string.Empty;
+    private string _documentType = string.Empty;
+    private string _description = string.Empty;
+    private bool _isGenerating = false;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private List<DocumentTypeListItem> _documentTypes = new();
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "aid")]
+    public string? AcquisitionIdParam { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Pre-fill acquisition ID if provided via query string
+        if (!string.IsNullOrEmpty(AcquisitionIdParam))
+        {
+            _acquisitionId = AcquisitionIdParam;
+        }
+
+        // Load document types
+        await LoadDocumentTypes();
+    }
+
+    private async Task LoadDocumentTypes()
+    {
+        try
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            var repo = new AcquisitionDocumentRepository(context);
+            var documentTypes = await repo.GetDocumentTypesAsync().ToListAsync();
+            _documentTypes = documentTypes.Select(dt => new DocumentTypeListItem
+            {
+                DocumentTypeCode = dt.DocumentTypeCode,
+                DocumentTypeDesc = dt.DocumentTypeDesc ?? string.Empty
+            }).ToList();
+            
+            // Add Miscellaneous option
+            _documentTypes.Add(new DocumentTypeListItem
+            {
+                DocumentTypeCode = "Miscellaneous",
+                DocumentTypeDesc = "Miscellaneous"
+            });
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading document types: {ex.Message}";
+        }
+    }
+
+    private async Task GenerateCoverSheet()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        // Validate form
+        if (_form != null)
+        {
+            await _form.Validate();
+            if (!_form.IsValid) return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_acquisitionId) || !int.TryParse(_acquisitionId, out int acqId))
+        {
+            _errorMessage = "Please enter a valid Acquisition ID.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_documentType))
+        {
+            _errorMessage = "Please select a document type.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_description))
+        {
+            _errorMessage = "Please enter a description.";
+            return;
+        }
+
+        _isGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            // Load acquisition with all related data
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            var acqRepo = new AcquisitionRepository(context);
+            var acquisition = await acqRepo.LoadAcquisitionByAcquisitionIDAsync(acqId);
+
+            if (acquisition == null)
+            {
+                _errorMessage = $"Acquisition ID {acqId} does not exist. Please enter a valid acquisition ID.";
+                return;
+            }
+
+            // Generate the cover sheet
+            var fileId = await CoverSheetService.GenerateAcquisitionCoverSheetAsync(
+                acquisition,
+                _documentType,
+                _description,
+                "current_user"); // TODO: Get actual username from auth context
+
+            // Trigger download
+            await JSRuntime.InvokeVoidAsync("open", $"/api/download/{fileId}", "_blank");
+
+            _successMessage = "Cover sheet generated successfully!";
+            
+            // Clear form
+            _acquisitionId = string.Empty;
+            _documentType = string.Empty;
+            _description = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error generating cover sheet: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/acquisitions");
+    }
+
+    public class DocumentTypeListItem
+    {
+        public string DocumentTypeCode { get; set; } = string.Empty;
+        public string DocumentTypeDesc { get; set; } = string.Empty;
+    }
+}

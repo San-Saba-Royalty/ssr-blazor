@@ -27,10 +27,10 @@
             </MudItem>
 
             <MudItem xs="12" sm="4" Class="d-flex align-center">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
-                           StartIcon="@Icons.Material.Filled.Add" 
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
                            OnClick="AddDocumentTemplate"
-                           Disabled="@string.IsNullOrEmpty(_selectedDocumentType)">
+                           Disabled="@(string.IsNullOrEmpty(_selectedDocumentType) || _selectedDocumentType == ALL_DOCUMENTS)">
                     Add Document Template
                 </MudButton>
             </MudItem>
@@ -39,10 +39,10 @@
 
     @if (!string.IsNullOrEmpty(_selectedDocumentType))
     {
-        <MudDataGrid T="DocumentTemplate" Items="@_templates" Filterable="true" SortMode="SortMode.Multiple" 
+        <MudDataGrid T="DocumentTemplate" Items="@_templates" Filterable="true" SortMode="SortMode.Multiple"
                      QuickFilter="@_quickFilter" RowsPerPage="25">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">Templates for @_selectedDocumentType</MudText>
+                <MudText Typo="Typo.h6">Templates for @(_selectedDocumentType == ALL_DOCUMENTS ? "All Document Types" : _selectedDocumentType)</MudText>
                 <MudSpacer />
                 <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
                               AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
@@ -92,17 +92,30 @@
     private List<DocumentTemplate> _templates = new();
     private string _selectedDocumentType = string.Empty;
     private string _searchString = string.Empty;
+    private const string ALL_DOCUMENTS = "ALL";
 
     protected override async Task OnInitializedAsync()
     {
         await LoadDocumentTypes();
+        _selectedDocumentType = ALL_DOCUMENTS;
+        await LoadTemplates();
     }
 
     private async Task LoadDocumentTypes()
     {
         try
         {
-            _documentTypes = await DocumentService.GetDocumentTypesAsync();
+            var types = await DocumentService.GetDocumentTypesAsync();
+            // Filter out any existing "All" entries that might come from the database
+            var filteredTypes = types.Where(t => !string.Equals(t.Code, "ALL", StringComparison.OrdinalIgnoreCase)
+                                                  && !string.Equals(t.Name, "All Documents", StringComparison.OrdinalIgnoreCase)
+                                                  && !string.Equals(t.Name, "All Document Types", StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            _documentTypes = new List<DocumentTypeItem>
+            {
+                new DocumentTypeItem { Code = ALL_DOCUMENTS, Name = "All Document Types" }
+            };
+            _documentTypes.AddRange(filteredTypes);
         }
         catch (Exception ex)
         {
@@ -112,15 +125,18 @@
 
     private async Task LoadTemplates()
     {
-        if (string.IsNullOrEmpty(_selectedDocumentType))
-        {
-            _templates = new List<DocumentTemplate>();
-            return;
-        }
-
         try
         {
-            _templates = await DocumentService.GetAllAsync(t => t.DocumentTypeCode == _selectedDocumentType);
+            if (string.IsNullOrEmpty(_selectedDocumentType) || _selectedDocumentType == ALL_DOCUMENTS)
+            {
+                // Load all templates
+                _templates = await DocumentService.GetAllAsync(t => true);
+            }
+            else
+            {
+                // Load templates filtered by document type
+                _templates = await DocumentService.GetAllAsync(t => t.DocumentTypeCode == _selectedDocumentType);
+            }
         }
         catch (Exception ex)
         {
@@ -191,7 +207,7 @@
     {
         // TODO: Implement DocuShare URL building or alternative document storage URL
         // For now, return a placeholder
-        return $"#document/{template.DSFileID}";
+        return $"/document/{template.DSFileID}";
     }
 
     // Watch for changes to selected document type

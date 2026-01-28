@@ -32,13 +32,26 @@ public class ViewService
     /// <summary>
     /// Apply a view to a user's session/profile
     /// </summary>
-    public async Task<(bool Success, string? Error)> ApplyViewToUserAsync(string userId, int? viewId)
+    public async Task<(bool Success, string? Error)> ApplyViewToUserAsync(string userId, int? viewId, string? pageName = null)
     {
         try
         {
             if (!int.TryParse(userId, out int userIdInt))
             {
                 return (false, "Invalid User ID format.");
+            }
+
+            if (!string.IsNullOrEmpty(pageName) && viewId.HasValue)
+            {
+                var pref = new UserPagePreference
+                {
+                    UserID = userIdInt,
+                    PageName = pageName,
+                    ViewID = viewId.Value
+                };
+                await _repository.SaveUserPagePreferenceAsync(pref);
+                _logger.LogInformation("Applied view {ViewId} to user {UserId} for page {PageName}", viewId, userId, pageName);
+                return (true, null);
             }
 
             var user = await _userRepository.LoadUserByUserIdAsync(userIdInt);
@@ -62,11 +75,40 @@ public class ViewService
     }
 
     /// <summary>
-    /// Get all views for dropdown
+    /// Set the default view for a user (persisted in DB)
     /// </summary>
-    public async Task<List<View>> GetAllViewsAsync()
+    public async Task<(bool Success, string? Error)> SetUserDefaultViewAsync(string userId, int viewId, string? pageName = null)
     {
-        return await _repository.GetViewsAsync()
+        // This is essentially an alias for ApplyViewToUserAsync but explicit in intent for setting default
+        return await ApplyViewToUserAsync(userId, viewId, pageName);
+    }
+
+    /// <summary>
+    /// Get user's persisted view on login or page load
+    /// </summary>
+    public async Task<int?> GetUserDefaultViewAsync(string userId, string? pageName = null)
+    {
+        if (!int.TryParse(userId, out int userIdInt))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(pageName))
+        {
+            var pref = await _repository.GetUserPagePreferenceAsync(userIdInt, pageName);
+            if (pref != null) return pref.ViewID;
+        }
+
+        var user = await _userRepository.LoadUserByUserIdAsync(userIdInt);
+        return user?.LastViewID;
+    }
+
+    /// <summary>
+    /// Get all views for dropdown for a specific module
+    /// </summary>
+    public async Task<List<View>> GetAllViewsAsync(string module = "Acquisition")
+    {
+        return await _repository.GetViewsAsync(module)
             .OrderBy(v => v.ViewName)
             .ToListAsync();
     }
@@ -87,7 +129,7 @@ public class ViewService
         var view = await _repository.GetByIdNoTrackingAsync(viewId);
         if (view == null) return null;
 
-        var allFields = await _fieldRepository.GetDisplayFieldsAsync();
+        var allFields = await _fieldRepository.GetDisplayFieldsAsync(view.Module);
         var selectedFields = await _repository.GetViewFieldsAsync(viewId);
 
         var config = new ViewConfiguration
@@ -115,9 +157,9 @@ public class ViewService
     /// <summary>
     /// Get blank view configuration for new view
     /// </summary>
-    public async Task<ViewConfiguration> GetNewViewConfigurationAsync()
+    public async Task<ViewConfiguration> GetNewViewConfigurationAsync(string module = "Acquisition")
     {
-        var allFields = await _fieldRepository.GetDisplayFieldsAsync();
+        var allFields = await _fieldRepository.GetDisplayFieldsAsync(module);
         return new ViewConfiguration
         {
             ViewID = 0,
@@ -129,7 +171,8 @@ public class ViewService
                 DisplayName = f.FieldName,
                 IsSelected = false,
                 DisplayOrder = f.DisplayOrder
-            }).ToList()
+            }).ToList(),
+            Module = module
         };
     }
 
@@ -147,7 +190,7 @@ public class ViewService
             }
 
             // Check for duplicate name
-            if (await _repository.ViewNameExistsAsync(config.ViewName))
+            if (await _repository.ViewNameExistsAsync(config.ViewName, config.Module))
             {
                 return (false, null, "A view with this name already exists");
             }
@@ -155,7 +198,8 @@ public class ViewService
             // Create view
             var view = new View
             {
-                ViewName = config.ViewName
+                ViewName = config.ViewName,
+                Module = config.Module
             };
 
             var created = await _repository.AddAsync(view);
@@ -205,7 +249,7 @@ public class ViewService
             }
 
             // Check for duplicate name
-            if (await _repository.ViewNameExistsAsync(config.ViewName, config.ViewID))
+            if (await _repository.ViewNameExistsAsync(config.ViewName, config.Module, config.ViewID))
             {
                 return (false, null, "A view with this name already exists");
             }

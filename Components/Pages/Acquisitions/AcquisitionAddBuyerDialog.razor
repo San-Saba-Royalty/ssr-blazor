@@ -1,0 +1,117 @@
+@using MudBlazor
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using Microsoft.EntityFrameworkCore
+@inject BuyerRepository BuyerRepo
+
+<MudDialog>
+    <DialogContent>
+        <MudTable T="Buyer" Items="@_buyers" MultiSelection="true" @bind-SelectedItems="_selectedBuyers"
+                  Filter="new Func<Buyer,bool>(FilterFunc)" SortLabel="Sort By" Hover="true" Dense="true" Elevation="0"
+                  FixedHeader="true" Height="400px" Loading="@_loading">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Select Buyers</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search by Name, City, State..." Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Immediate="true" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<Buyer, object>(x=>x.BuyerName)">Name</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Buyer, object>(x=>x.ContactName)">Contact</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Buyer, object>(x=>x.City)">City</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Buyer, object>(x=>x.StateCode)">State</MudTableSortLabel></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">@context.BuyerName</MudTd>
+                <MudTd DataLabel="Contact">@context.ContactName</MudTd>
+                <MudTd DataLabel="City">@context.City</MudTd>
+                <MudTd DataLabel="State">@context.StateCode</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+        
+        <MudCard Class="mt-2" Elevation="0">
+             <MudCardContent>
+                 <MudText Typo="Typo.subtitle2">Selected Buyers: @_selectedBuyers.Count</MudText>
+                 <MudChipSet T="Buyer" AllClosable="true" OnClose="RemoveSelection">
+                     @foreach (var selected in _selectedBuyers.Take(10)) 
+                     {
+                         <MudChip Value="@selected" Text="@selected.BuyerName" />
+                     }
+                     @if (_selectedBuyers.Count > 10)
+                     {
+                         <MudChip Text="..." Disabled="true" />
+                     }
+                 </MudChipSet>
+             </MudCardContent>
+        </MudCard>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(_selectedBuyers.Count == 0)">
+            Add Selected (@_selectedBuyers.Count)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public List<int> ExcludeBuyerIds { get; set; } = new();
+
+    private List<Buyer> _buyers = new();
+    private HashSet<Buyer> _selectedBuyers = new();
+    private string _searchString = "";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var allBuyers = await (await BuyerRepo.GetBuyersAsync()).ToListAsync();
+        
+        // Filter out already added buyers
+        if (ExcludeBuyerIds != null && ExcludeBuyerIds.Any())
+        {
+            _buyers = allBuyers.Where(b => !ExcludeBuyerIds.Contains(b.BuyerID)).ToList();
+        }
+        else
+        {
+            _buyers = allBuyers;
+        }
+
+        _loading = false;
+    }
+
+    private bool FilterFunc(Buyer buyer)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+        if (buyer.BuyerName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (buyer.ContactName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (buyer.City?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (buyer.StateCode?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        return false;
+    }
+
+    private void RemoveSelection(MudChip<Buyer> chip)
+    {
+        // This is a bit tricky with MudTable binding, ensuring sync
+        if (chip.Value is Buyer buyer)
+        {
+             _selectedBuyers.Remove(buyer);
+        }
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_selectedBuyers.ToList()));
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -11,6 +11,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddApplication(builder.Configuration);
+builder.Services.AddScoped<ISpreadsheetImportService, SpreadsheetImportService>();
 
 builder.Services.AddMudServices();
 

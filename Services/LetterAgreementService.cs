@@ -1064,7 +1064,7 @@ public class LetterAgreementService
     {
         return await _context.LetterAgreementChanges
             .Include(c => c.User)
-            .Where(c => c.LetterAgreementID == letterAgreementId)
+            .Where(c => c.LetterAgreementId == letterAgreementId)
             .OrderByDescending(c => c.ChangeDate)
             .ToListAsync();
     }
@@ -1086,8 +1086,8 @@ public class LetterAgreementService
         // If `user` is an object containing `UserId`, it needs to be passed or retrieved.
         var change = new LetterAgreementChange
         {
-            LetterAgreementID = letterAgreementId,
-            UserID = userId, // Changed from `user.UserId` to `userId` parameter for syntactic correctness.
+            LetterAgreementId = letterAgreementId,
+            UserId = userId, // Changed from `user.UserId` to `userId` parameter for syntactic correctness.
                              // If `user` object is intended, it must be provided or retrieved.
             ChangeDate = DateTime.Now,
             ChangeTypeCode = changeTypeCode,

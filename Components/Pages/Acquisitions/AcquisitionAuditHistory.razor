@@ -1,0 +1,49 @@
+@using Microsoft.AspNetCore.Authorization
+@using SSRBusiness.Entities
+@using MudBlazor
+@attribute [Authorize]
+
+<MudCard Elevation="0">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Audit History</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudAlert Severity="Severity.Info">Audit History functionality coming soon.</MudAlert>
+        
+        @* Placeholder for Audit List *@
+        <MudTable Items="_auditLogs" Dense="true" Hover="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>User</MudTh>
+                <MudTh>Action</MudTh>
+                <MudTh>Details</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.LogDate</MudTd>
+                <MudTd>@context.UserName</MudTd>
+                <MudTd>@context.ActionType</MudTd>
+                <MudTd>@context.Description</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public int AcquisitionId { get; set; }
+
+    // Placeholder model
+    private class AuditLogModel
+    {
+        public DateTime LogDate { get; set; }
+        public string UserName { get; set; } = "";
+        public string ActionType { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
+    private List<AuditLogModel> _auditLogs = new();
+}

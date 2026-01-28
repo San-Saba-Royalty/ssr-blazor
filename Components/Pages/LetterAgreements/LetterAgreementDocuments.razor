@@ -1,0 +1,175 @@
+@page "/letteragreements/{LetterAgreementId:int}/documents"
+@page "/letteragreement/documents/{LetterAgreementId:int}"
+
+@using SSRBlazor.Services
+@using MudBlazor
+
+<PageTitle>Letter Agreement Documents</PageTitle>
+
+@if (ShowTabs)
+{
+    @* Tab Navigation *@
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+        <MudTabPanel Text="Letter Agreement Information" OnClick="@(() => NavigateToTab("info"))" />
+        <MudTabPanel Text="Notes" OnClick="@(() => NavigateToTab("notes"))" />
+        <MudTabPanel Text="Documents" />
+        <MudTabPanel Text="Audit History" OnClick="@(() => NavigateToTab("audit"))" />
+    </MudTabs>
+}
+
+@* Messages *@
+@if (!string.IsNullOrEmpty(_displayMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _displayMessage = null)">
+        @_displayMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+        @_errorMessage
+    </MudAlert>
+}
+
+@* Generate Document Section *@
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+        Generate Letter Agreement Document
+    </MudText>
+
+    <MudGrid>
+        @* State Selection (TX/LA) - Drives template selection *@
+        <MudItem xs="12" md="4">
+            <MudSelect T="string"
+                       Label="State"
+                       @bind-Value="_selectedStateCode"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter">
+                <MudSelectItem Value="@("TX")">Texas</MudSelectItem>
+                <MudSelectItem Value="@("LA")">Louisiana</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        @* Signing Partner Selection *@
+        <MudItem xs="12" md="8">
+            <MudSelect T="int?"
+                       Label="Signing Partner"
+                       @bind-Value="_selectedSigningPartnerId"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Clearable="true">
+                @foreach (var partner in _signingPartners)
+                {
+                    <MudSelectItem Value="@((int?)partner.Id)">
+                        @partner.Name @(partner.IsCompany ? "(Company)" : "(Individual)")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        @* Document Type Selection *@
+        <MudItem xs="12" md="6">
+            <MudSelect T="string"
+                       Label="Document Type"
+                       @bind-Value="_selectedDocumentType"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter">
+                <MudSelectItem Value="@("LetterAgreement")">Letter Agreement</MudSelectItem>
+                <MudSelectItem Value="@("Conveyance")">Conveyance</MudSelectItem>
+                <MudSelectItem Value="@("ExhibitA")">Exhibit A</MudSelectItem>
+                <MudSelectItem Value="@("All")">All Documents</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="GenerateDocument"
+                           Disabled="@(!CanGenerateDocument())">
+                    Generate Document
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* Generated Documents Grid *@
+<MudDataGrid @ref="_dataGrid"
+             T="LetterAgreementDocumentModel"
+             Items="_documents"
+             Dense="true"
+             Hover="true"
+             Striped="true"
+             Bordered="true"
+             RowClick="OnRowClick"
+             SelectedItem="_selectedDocument"
+             SelectedItemChanged="OnSelectedItemChanged"
+             RowStyleFunc="@RowStyleFunc"
+             Loading="_isLoading"
+             Height="400px"
+             FixedHeader="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Generated Documents</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.Refresh" 
+                   OnClick="RefreshDocuments">
+            Refresh
+        </MudButton>
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Error" 
+                   StartIcon="@Icons.Material.Filled.Delete" 
+                   OnClick="DeleteSelectedDocument"
+                   Disabled="@(_selectedDocument == null)">
+            Delete
+        </MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.DocumentType" Title="Type" />
+        <PropertyColumn Property="x => x.SigningPartnerName" Title="Signing Partner" />
+        <PropertyColumn Property="x => x.StateCode" Title="State" />
+        <PropertyColumn Property="x => x.CreatedBy" Title="Created By" />
+        <PropertyColumn Property="x => x.CreatedDate" Title="Created On" Format="MM/dd/yyyy hh:mm tt" />
+        <PropertyColumn Property="x => x.FileName" Title="File Name" />
+        
+        <TemplateColumn Title="Download" HeaderStyle="width:90px;">
+            <CellTemplate>
+                @if (!string.IsNullOrEmpty(context.Item.DocumentPath))
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Download" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   OnClick="@(() => DownloadDocument(context.Item))"
+                                   title="Download" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            Confirm Delete
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this document?</MudText>
+        @if (_selectedDocument != null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                <strong>@_selectedDocument.DocumentType</strong> - @_selectedDocument.FileName
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>

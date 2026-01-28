@@ -3,6 +3,8 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using SSRBusiness.Entities;
 using SSRBlazor.Services;
+using SSRBlazor.Models;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace SSRBlazor.Components.Pages.Operators;
 
@@ -14,6 +16,9 @@ public partial class OperatorIndex : ComponentBase
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ViewService ViewService { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     #endregion
 
@@ -24,6 +29,13 @@ public partial class OperatorIndex : ComponentBase
     private Operator? _selectedItem;
     private Dictionary<string, string> _columnFilters = new();
     private int _totalCount = 0;
+    private bool _isInitialized = false;
+
+    // View State
+    private int? _selectedViewId;
+    private List<View> _availableViews = new();
+    private string _activeView = "Default";
+    private HashSet<string> _visibleColumns = new();
 
     // Messages
     private string? _displayMessage = string.Empty;
@@ -45,8 +57,45 @@ public partial class OperatorIndex : ComponentBase
 
     #region Grid Data Loading
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadViewsAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _selectedViewId = await ViewService.GetUserDefaultViewAsync(userId, "OperatorIndex");
+            if (_selectedViewId.HasValue)
+            {
+                var view = _availableViews.FirstOrDefault(v => v.ViewID == _selectedViewId.Value);
+                if (view != null)
+                {
+                    _activeView = view.ViewName ?? "Default";
+                    await LoadDataWithViewAsync(_selectedViewId.Value);
+                    _isInitialized = true;
+                    return;
+                }
+            }
+        }
+
+        InitializeDefaultLegacyView();
+        _isInitialized = true;
+    }
+
+    private void InitializeDefaultLegacyView()
+    {
+        _visibleColumns = new HashSet<string>
+        {
+            "OperatorName", "ContactName", "Phone", "Email", "City", "State"
+        };
+    }
+
     private async Task<GridData<Operator>> LoadServerData(GridState<Operator> state)
     {
+        if (!_isInitialized) return new GridData<Operator> { Items = new List<Operator>(), TotalItems = 0 };
+
         try
         {
             var result = await OperatorService.GetOperatorsPagedAsync(state, _columnFilters);
@@ -57,6 +106,95 @@ public partial class OperatorIndex : ComponentBase
         {
             _errorMessage = $"Error loading operators: {ex.Message}";
             return new GridData<Operator> { Items = new List<Operator>(), TotalItems = 0 };
+        }
+    }
+
+    private async Task LoadViewsAsync()
+    {
+        _availableViews = await ViewService.GetAllViewsAsync("Operator");
+    }
+
+    private async Task OnViewSelected(int? viewId)
+    {
+        _selectedViewId = viewId;
+
+        if (viewId.HasValue)
+        {
+            var view = _availableViews.FirstOrDefault(v => v.ViewID == viewId.Value);
+            _activeView = view?.ViewName ?? "Default";
+        }
+        else
+        {
+            _activeView = "Default";
+            InitializeDefaultLegacyView();
+        }
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId) && viewId.HasValue)
+        {
+            await ViewService.SetUserDefaultViewAsync(userId, viewId.Value, "OperatorIndex");
+        }
+
+        await LoadDataWithViewAsync(viewId);
+    }
+
+    private async Task LoadDataWithViewAsync(int? viewId)
+    {
+        if (!viewId.HasValue)
+        {
+            if (_dataGrid != null) await _dataGrid.ReloadServerData();
+            return;
+        }
+
+        var viewConfig = await ViewService.GetViewConfigurationAsync(viewId.Value);
+        if (viewConfig != null)
+        {
+            _visibleColumns = new HashSet<string>(
+                viewConfig.Fields.Where(f => f.IsSelected).Select(f => f.FieldName)
+            );
+        }
+
+        if (_dataGrid != null) await _dataGrid.ReloadServerData();
+    }
+
+    private bool IsColumnVisible(string columnName)
+    {
+        if (_activeView == "All Fields" || _visibleColumns.Count == 0) return true;
+        return _visibleColumns.Contains(columnName);
+    }
+
+    private async Task OpenColumnOrdering()
+    {
+        if (!_selectedViewId.HasValue)
+        {
+            Snackbar.Add("Please select a specific view to customize columns.", Severity.Warning);
+            return;
+        }
+
+        var viewConfig = await ViewService.GetViewConfigurationAsync(_selectedViewId.Value);
+        if (viewConfig == null) return;
+
+        var parameters = new DialogParameters();
+        parameters.Add("Fields", viewConfig.Fields);
+
+        var dialog = DialogService.Show<SSRBlazor.Components.Dialogs.ColumnOrderingDialog>("Column Ordering", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is List<ViewFieldSelection> orderedFields)
+        {
+            viewConfig.Fields = orderedFields;
+            var updateResult = await ViewService.UpdateAsync(viewConfig);
+            if (updateResult.Success)
+            {
+                Snackbar.Add("View columns updated.", Severity.Success);
+                await LoadDataWithViewAsync(_selectedViewId.Value);
+            }
+            else
+            {
+                Snackbar.Add($"Error updating view: {updateResult.Error}", Severity.Error);
+            }
         }
     }
 

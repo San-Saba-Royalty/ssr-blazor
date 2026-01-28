@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SSRBlazor.Models;
 using SSRBusiness.BusinessClasses;
 using SSRBusiness.Entities;
+using SSRBusiness.Interfaces;
 
 namespace SSRBlazor.Services;
 
@@ -15,6 +16,7 @@ public class AcquisitionDocumentService
     private readonly AcquisitionRepository _acquisitionRepo; // Added
     private readonly UserRepository _userRepo; // Added
     private readonly AuthenticationStateProvider _authStateProvider; // Added
+    private readonly IFileService _fileService; // Refactored to interface
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AcquisitionDocumentService> _logger;
 
@@ -23,6 +25,7 @@ public class AcquisitionDocumentService
         AcquisitionRepository acquisitionRepo,
         UserRepository userRepo,
         AuthenticationStateProvider authStateProvider,
+        IFileService fileService,
         IWebHostEnvironment environment,
         ILogger<AcquisitionDocumentService> logger)
     {
@@ -30,6 +33,7 @@ public class AcquisitionDocumentService
         _acquisitionRepo = acquisitionRepo;
         _userRepo = userRepo;
         _authStateProvider = authStateProvider;
+        _fileService = fileService;
         _environment = environment;
         _logger = logger;
     }
@@ -42,7 +46,7 @@ public class AcquisitionDocumentService
     public async Task<List<DocumentTypeModel>> GetDocumentTypesAsync()
     {
         var types = await _repository.GetDocumentTypesAsync().ToListAsync();
-        
+
         return types.Select(t => new DocumentTypeModel
         {
             DocumentTypeCode = t.DocumentTypeCode,
@@ -60,7 +64,7 @@ public class AcquisitionDocumentService
     public async Task<List<DocumentTemplateModel>> GetDocumentTemplatesByTypeAsync(string documentTypeCode)
     {
         var templates = await _repository.GetDocumentTemplatesByTypeAsync(documentTypeCode).ToListAsync();
-        
+
         return templates.Select(t => new DocumentTemplateModel
         {
             DocumentTemplateID = t.DocumentTemplateID,
@@ -106,7 +110,7 @@ public class AcquisitionDocumentService
     public async Task<List<AcquisitionDocumentModel>> GetAcquisitionDocumentsAsync(int acquisitionId)
     {
         var documents = await _repository.GetAcquisitionDocumentsAsync(acquisitionId).ToListAsync();
-        
+
         return documents.Select(MapToModel).ToList();
     }
 
@@ -182,10 +186,10 @@ public class AcquisitionDocumentService
             if (string.IsNullOrEmpty(template.DocumentTemplateLocation))
                 return new DocumentOperationResult { Success = false, Error = "Template file path not configured" };
 
-            // 2. Get Acquisition Data
+            // 2 Get Acquisition Data
             var acquisition = await _acquisitionRepo.LoadAcquisitionByAcquisitionIDAsync(request.AcquisitionID);
             if (acquisition == null)
-                 return new DocumentOperationResult { Success = false, Error = "Acquisition not found" };
+                return new DocumentOperationResult { Success = false, Error = "Acquisition not found" };
 
             // 3. Get Current User
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
@@ -202,13 +206,13 @@ public class AcquisitionDocumentService
             var webRoot = _environment.WebRootPath;
             var templateDir = Path.Combine(webRoot, "Documents", "Templates");
             var outputDir = Path.Combine(webRoot, "Documents", "Generated");
-            
+
             // Ensure directories exist
             Directory.CreateDirectory(templateDir);
             Directory.CreateDirectory(outputDir);
 
             var sourcePath = Path.Combine(templateDir, template.DocumentTemplateLocation);
-            
+
             // Fallback: check if location is full path or just filename
             if (!File.Exists(sourcePath))
             {
@@ -219,17 +223,17 @@ public class AcquisitionDocumentService
                 }
                 else
                 {
-                     return new DocumentOperationResult { Success = false, Error = $"Template file not found at {sourcePath}" };
+                    return new DocumentOperationResult { Success = false, Error = $"Template file not found at {sourcePath}" };
                 }
             }
 
             var generatedFileName = $"{acquisition.AcquisitionNumber ?? "Acq"}_{template.DocumentTemplateDesc}_{DateTime.Now:yyyyMMddHHmmss}.docx";
             // Sanitize filename
             generatedFileName = string.Join("_", generatedFileName.Split(Path.GetInvalidFileNameChars()));
-            
+
             var outputPath = Path.Combine(outputDir, generatedFileName);
 
-            _logger.LogInformation("Generating document {FileName} for Acq {AcqID} using Template {TemplateID}", 
+            _logger.LogInformation("Generating document {FileName} for Acq {AcqID} using Template {TemplateID}",
                 generatedFileName, request.AcquisitionID, request.DocumentTemplateID);
 
             // 5. Generate Document
@@ -238,7 +242,7 @@ public class AcquisitionDocumentService
             // Current Engine doesn't seem to take custom field values dictionary, relies on Entity data.
             // If Request has custom values, we might need to apply them AFTER engine or modify engine.
             // For now, using standard Engine.
-            
+
             engine.CreateMergeDocument(sourcePath, outputPath, acquisition, user, request.DocumentTemplateID.ToString());
 
             // 6. Register in Database
@@ -289,41 +293,36 @@ public class AcquisitionDocumentService
                 if (user != null) userId = user.UserId;
             }
 
-            // 2. Save File
-            var webRoot = _environment.WebRootPath;
-            var uploadDir = Path.Combine(webRoot, "Documents", "Uploads");
-            Directory.CreateDirectory(uploadDir);
+            // 2. Save File using IFileService (Abstraction for Azure/Local)
+            // Use 'acquisitions' container as per architecture
 
+            // Clean filename logic
             var safeFileName = $"{acquisitionId}_{DateTime.Now:yyyyMMdd}_{fileName}";
             safeFileName = string.Join("_", safeFileName.Split(Path.GetInvalidFileNameChars()));
-            var filePath = Path.Combine(uploadDir, safeFileName);
 
-            using (var fs = new FileStream(filePath, FileMode.Create))
-            {
-                await fileStream.CopyToAsync(fs);
-            }
+            var blobUri = await _fileService.UploadFileAsync("acquisitions", safeFileName, fileStream);
 
             // 3. Create Record
             var document = new AcquisitionDocument
             {
                 AcquisitionID = acquisitionId,
                 CreatedOn = DateTime.Now,
-                UserId = userId
-                // DocumentLocation = safeFileName
+                UserId = userId,
+                DocumentLocation = blobUri // Storing the URI or Path returned by service
             };
 
             await _repository.AddAcquisitionDocumentAsync(document);
-            
+
             // Add new note
             var note = new AcquisitionNote
             {
                 AcquisitionID = acquisitionId,
-                UserID = userId, // Use the integer UserID
+                UserID = userId,
                 CreatedDateTime = DateTime.Now,
-                NoteTypeCode = "D", // Draft notes from old system seem to map here
-                NoteText = $"Uploaded document: {fileName}" // Placeholder for actual notes
+                NoteTypeCode = "D",
+                NoteText = $"Uploaded document: {fileName}"
             };
-            await _repository.AddAcquisitionNoteAsync(note); // Assuming a method to add notes
+            await _repository.AddAcquisitionNoteAsync(note);
 
             return new DocumentOperationResult { Success = true };
         }

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using MudBlazor;
 using SSRBusiness.Entities;
 using SSRBlazor.Services;
+using SSRBlazor.Models;
 using AcquisitionEntity = SSRBusiness.Entities.Acquisition;
 
 namespace SSRBlazor.Components.Pages.Acquisitions;
@@ -17,30 +19,62 @@ public partial class AcquisitionIndex : ComponentBase
     private string _displayMessage = string.Empty;
     private List<string> _validationErrors = new();
     private string _activeFilter = "All Records";
-    private string _activeView = "All Fields";
+    private string _activeView = "Default";
     private int _totalCount = 0;
     private bool _showBarcodeDialog = false;
 
-    // Available filters and views (loaded from service)
+    // View State
+    private int? _selectedViewId;
+    private List<View> _availableViews = new();
     private List<NamedFilter> _availableFilters = new();
-    private List<NamedView> _availableViews = new();
 
     // Current view's visible columns
     private HashSet<string> _visibleColumns = new();
 
+    // Flag to prevent concurrent loading during initialization
+    private bool _isInitialized = false;
+
     protected override async Task OnInitializedAsync()
     {
-        // Load available filters and views from service
+        // Load available filters from AcquisitionService
         _availableFilters = await AcquisitionService.GetAvailableFiltersAsync();
-        _availableViews = await AcquisitionService.GetAvailableViewsAsync();
 
-        // Initialize with default view
-        InitializeDefaultView();
+        // Load available views from ViewService
+        await LoadViewsAsync();
+
+        // Load user's default view
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _selectedViewId = await ViewService.GetUserDefaultViewAsync(userId);
+            if (_selectedViewId.HasValue)
+            {
+                var view = _availableViews.FirstOrDefault(v => v.ViewID == _selectedViewId.Value);
+                if (view != null)
+                {
+                    _activeView = view.ViewName ?? "Default";
+                    // Mark initialized before loading data
+                    _isInitialized = true;
+                    await LoadDataWithViewAsync(_selectedViewId.Value);
+                    return; // LoadDataWithViewAsync calls LoadDataAsync
+                }
+            }
+        }
+
+        // If no default view, fallback to legacy default or just load data
+        if (_visibleColumns.Count == 0)
+        {
+            InitializeDefaultLegacyView();
+        }
+
+        _isInitialized = true;
+        await LoadDataAsync();
     }
 
-    private void InitializeDefaultView()
+    private void InitializeDefaultLegacyView()
     {
-        // Default visible columns matching "Summary View" plus a few more useful fields
         _visibleColumns = new HashSet<string>
         {
             "AcquisitionID",
@@ -56,10 +90,132 @@ public partial class AcquisitionIndex : ComponentBase
         };
     }
 
+    private async Task LoadViewsAsync()
+    {
+        _availableViews = await ViewService.GetAllViewsAsync();
+    }
+
+    private async Task OnViewSelected(int? viewId)
+    {
+        _selectedViewId = viewId;
+
+        // Update UI Label
+        if (viewId.HasValue)
+        {
+            var view = _availableViews.FirstOrDefault(v => v.ViewID == viewId.Value);
+            _activeView = view?.ViewName ?? "Default";
+        }
+        else
+        {
+            _activeView = "Default";
+            // Check if user has "Default" view logic, otherwise fallback
+            InitializeDefaultLegacyView();
+        }
+
+        // Persist this choice
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId) && viewId.HasValue)
+        {
+            await ViewService.SetUserDefaultViewAsync(userId, viewId.Value);
+        }
+
+        // Reload grid with new view configuration
+        await LoadDataWithViewAsync(viewId);
+
+        StateHasChanged();
+    }
+
+    private async Task LoadDataWithViewAsync(int? viewId)
+    {
+        if (!viewId.HasValue)
+        {
+            // Reset to default columns if needed
+            _activeFilter = "All Records";
+            InitializeDefaultLegacyView();
+            if (_dataGrid != null) await _dataGrid.ReloadServerData();
+            return;
+        }
+
+        var viewConfig = await ViewService.GetViewConfigurationAsync(viewId.Value);
+        if (viewConfig != null)
+        {
+            // Apply view's selected fields to grid
+            var selectedFields = viewConfig.Fields.Where(f => f.IsSelected).Select(f => f.FieldName).ToList();
+
+            if (selectedFields.Any())
+            {
+                _visibleColumns = new HashSet<string>(selectedFields);
+            }
+            else
+            {
+                // FALLBACK: View exists but has no selected columns
+                // Use default columns to prevent empty grid
+                Snackbar.Add($"View '{_activeView}' has no columns configured. Using defaults. Please configure columns using the Column Ordering button.", Severity.Warning);
+                InitializeDefaultLegacyView();
+            }
+        }
+        else
+        {
+            // View not found, use defaults
+            Snackbar.Add($"View configuration not found. Using default columns.", Severity.Warning);
+            InitializeDefaultLegacyView();
+        }
+
+        if (_dataGrid != null) await _dataGrid.ReloadServerData();
+    }
+
+    private async Task OpenColumnOrdering()
+    {
+        if (!_selectedViewId.HasValue)
+        {
+            Snackbar.Add("Please select a specific view to customize columns.", Severity.Warning);
+            return;
+        }
+
+        var viewConfig = await ViewService.GetViewConfigurationAsync(_selectedViewId.Value);
+        if (viewConfig == null) return;
+
+        var parameters = new DialogParameters();
+        parameters.Add("Fields", viewConfig.Fields);
+
+        // Note: Assuming ColumnOrderingDialog exists in SSRBlazor.Components.Dialogs
+        // If not, this will need to be adjusted to the correct namespace or component name
+        var dialog = DialogService.Show<SSRBlazor.Components.Dialogs.ColumnOrderingDialog>("Column Ordering", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is List<ViewFieldSelection> orderedFields)
+        {
+            viewConfig.Fields = orderedFields;
+            // Save the updated view configuration
+            var updateResult = await ViewService.UpdateAsync(viewConfig);
+            if (updateResult.Success)
+            {
+                Snackbar.Add("View columns updated.", Severity.Success);
+                await LoadDataWithViewAsync(_selectedViewId.Value);
+            }
+            else
+            {
+                Snackbar.Add($"Error updating view: {updateResult.Error}", Severity.Error);
+            }
+        }
+    }
+
+    // Helper for loading data (called by LoadServerData)
+    private async Task LoadDataAsync()
+    {
+        if (_dataGrid != null)
+        {
+            await _dataGrid.ReloadServerData();
+        }
+    }
+
     private bool IsColumnVisible(string columnName)
     {
-        // If "All Fields" view, show all columns
-        if (_activeView == "All Fields")
+        // If "All Fields" view (or logic dictates everything shown), logic could go here
+        // But with ViewService, we strictly follow _visibleColumns unless it's empty/all
+        if (_activeView == "All Fields" || _visibleColumns.Count == 0)
             return true;
 
         return _visibleColumns.Contains(columnName);
@@ -72,6 +228,16 @@ public partial class AcquisitionIndex : ComponentBase
     {
         try
         {
+            // Prevent concurrent access if initialization is not complete
+            if (!_isInitialized)
+            {
+                return new GridData<AcquisitionEntity>
+                {
+                    Items = Enumerable.Empty<AcquisitionEntity>(),
+                    TotalItems = 0
+                };
+            }
+
             // Convert MudBlazor sort definitions to our service format
             var sortDefinitions = state.SortDefinitions
                 .Select(s => new SortDefinition
@@ -83,14 +249,14 @@ public partial class AcquisitionIndex : ComponentBase
 
             // Convert MudBlazor filter definitions to our service format
             var filterDefinitions = state.FilterDefinitions
-                .Where(f => f.Value != null)
-                .Select(f => new FilterDefinition
-                {
-                    Field = f.Column?.PropertyName ?? string.Empty,
-                    Operator = f.Operator?.ToString() ?? "Contains",
-                    Value = f.Value?.ToString()
-                })
-                .ToList();
+                    .Where(f => f.Value != null)
+                    .Select(f => new FilterDefinition
+                    {
+                        Field = f.Column?.PropertyName ?? string.Empty,
+                        Operator = f.Operator?.ToString() ?? "Contains",
+                        Value = f.Value?.ToString()
+                    })
+                    .ToList();
 
             // Call the service to get paginated data
             var result = await AcquisitionService.GetAcquisitionsPagedAsync(
@@ -177,30 +343,6 @@ public partial class AcquisitionIndex : ComponentBase
             await _dataGrid.ReloadServerData();
         }
         Snackbar.Add($"Filter applied: {filterName}", Severity.Info);
-    }
-
-    /// <summary>
-    /// Apply a named view (controls column visibility)
-    /// </summary>
-    private void ApplyView(string viewName)
-    {
-        _activeView = viewName;
-
-        // Find the view definition from service
-        var view = _availableViews.FirstOrDefault(v => v.Name == viewName);
-
-        if (view?.VisibleColumns != null)
-        {
-            _visibleColumns = new HashSet<string>(view.VisibleColumns);
-        }
-        else
-        {
-            // "All Fields" - clear the set so IsColumnVisible returns true for all
-            _visibleColumns.Clear();
-        }
-
-        StateHasChanged();
-        Snackbar.Add($"View applied: {viewName}", Severity.Info);
     }
 
     /// <summary>

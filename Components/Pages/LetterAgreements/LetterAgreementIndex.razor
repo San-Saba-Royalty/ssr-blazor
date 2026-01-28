@@ -119,9 +119,9 @@
         
         <Columns>
             @* ========== ID Column (Visible) ========== *@
-            <PropertyColumn Property="x => x.LetterAgreementID" Title="ID" 
+            <PropertyColumn Property="x => x.LetterAgreementID" Title="ID"
                             Sortable="true" Filterable="true"
-                            HeaderStyle="width: 90px;">
+                            HeaderStyle="width: 120px; min-width: 120px;">
                 <FooterTemplate>
                     Count: @_totalCount
                 </FooterTemplate>
@@ -131,12 +131,12 @@
             <PropertyColumn Property="x => x.SellerLastName" Title="Seller Last Name"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.SellerLastName)" Hideable="true"
-                            HeaderStyle="width: 180px;" />
+                            HeaderStyle="width: 200px; min-width: 200px;" />
             
             <PropertyColumn Property="x => x.SellerName" Title="Seller Name"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.SellerName)" Hideable="true"
-                            HeaderStyle="width: 200px;" />
+                            HeaderStyle="width: 220px; min-width: 220px;" />
             
             <PropertyColumn Property="x => x.SellerEmail" Title="Seller Email"
                             Sortable="true" Filterable="true"
@@ -195,30 +195,30 @@
                             HeaderStyle="width: 130px;" />
             
             @* ========== Banking Days (Visible) ========== *@
-            <PropertyColumn Property="x => x.BankingDays" Title="Banking Days" 
+            <PropertyColumn Property="x => x.BankingDays" Title="Banking Days"
                             Sortable="true" Filterable="true"
-                            HeaderStyle="width: 130px;" />
+                            HeaderStyle="width: 160px; min-width: 160px;" />
             
             @* ========== Financial Fields (Hidden by default) ========== *@
             <PropertyColumn Property="x => x.TotalBonus" Title="Purchase Price"
                             Format="N2"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.TotalBonus)" Hideable="true"
-                            HeaderStyle="width: 130px;"
+                            HeaderStyle="width: 160px; min-width: 160px;"
                             CellStyle="text-align: right;" />
             
             <PropertyColumn Property="x => x.ConsiderationFee" Title="Consideration Fee"
                             Format="N2"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.ConsiderationFee)" Hideable="true"
-                            HeaderStyle="width: 130px;"
+                            HeaderStyle="width: 180px; min-width: 180px;"
                             CellStyle="text-align: right;" />
             
             <PropertyColumn Property="x => x.ReferralFee" Title="Referral Fee"
                             Format="N2"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.ReferralFee)" Hideable="true"
-                            HeaderStyle="width: 130px;"
+                            HeaderStyle="width: 150px; min-width: 150px;"
                             CellStyle="text-align: right;" />
             
             @* ========== Acreage Fields (Hidden by default) ========== *@
@@ -243,12 +243,12 @@
             <PropertyColumn Property="x => x.DealStatus" Title="Status"
                             Sortable="true" Filterable="true"
                             Hidden="@(!_columnVisibility.DealStatus)" Hideable="true"
-                            HeaderStyle="width: 150px;" />
+                            HeaderStyle="width: 180px; min-width: 180px;" />
             
             @* ========== Acquisition ID (Visible) ========== *@
-            <PropertyColumn Property="x => x.AcquisitionID" Title="Acq ID" 
+            <PropertyColumn Property="x => x.AcquisitionID" Title="Acq ID"
                             Sortable="true" Filterable="true"
-                            HeaderStyle="width: 90px;">
+                            HeaderStyle="width: 120px; min-width: 120px;">
                 <CellTemplate>
                     @if (context.Item.AcquisitionID.HasValue)
                     {

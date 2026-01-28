@@ -18,7 +18,8 @@ public static class DependencyInjection
         // Add memory cache
         services.AddMemoryCache();
 
-        // Register PooledDbContextFactory - provides both scoped contexts and factory
+        // Register PooledDbContextFactory for thread-safe DbContext pooling
+        // This allows multiple contexts to be created from the pool as needed
         services.AddPooledDbContextFactory<SsrDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("SanSabaConnection"),
@@ -26,6 +27,13 @@ public static class DependencyInjection
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null)));
+
+        // Register scoped SsrDbContext using the factory
+        services.AddScoped<SsrDbContext>(provider =>
+        {
+            var factory = provider.GetRequiredService<IDbContextFactory<SsrDbContext>>();
+            return factory.CreateDbContext();
+        });
 
         // Register SsrDbContext as DbContext for Repository pattern
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<SsrDbContext>());
@@ -59,7 +67,7 @@ public static class DependencyInjection
         services.AddScoped<CountyRepository>();
         services.AddScoped<FilterRepository>();
         services.AddScoped<FilterFieldRepository>();
-        
+
         // County/CAD Data Repositories
         services.AddScoped<CountyAppraisalGroupRepository>();
         services.AddScoped<CadTableRepository>();
@@ -80,7 +88,9 @@ public static class DependencyInjection
         services.AddScoped<ReferrerFormRepository>();
 
         // Register File Service
-        services.AddSingleton<IFileService, FileService>();
+        // Register File Service
+        // services.AddSingleton<IFileService, FileService>();
+        services.AddSingleton<IFileService, AzureBlobFileService>();
 
         // Register cached data services
         services.AddScoped<CachedDataService<User>>()
@@ -121,6 +131,19 @@ public static class DependencyInjection
         services.AddScoped<SSRBlazor.Services.ReportService>();
         services.AddScoped<LookUpService>();
         services.AddScoped<ThemeService>();
+        services.AddScoped<SessionStateService>();
+        services.AddScoped<WordTemplateEngine>();
+        services.AddScoped<LetterAgreementTemplateEngine>();
+        services.AddScoped<DocumentComposer>();
+        services.AddScoped<CoverSheetService>();
+        services.AddScoped<IGeneratedDocumentService, GeneratedDocumentService>();
+        services.AddScoped<IFileService, AzureFileShareFileService>();
+
+        // Register ViewCacheService as singleton for application-wide caching
+        services.AddSingleton<ViewCacheService>();
+
+        // Register cache warming hosted service (runs on startup)
+        services.AddHostedService<CacheWarmingService>();
 
         return services;
     }

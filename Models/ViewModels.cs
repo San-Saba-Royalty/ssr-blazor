@@ -10,6 +10,7 @@ public class ViewConfiguration
     public string? Description { get; set; }
     public bool IsDefault { get; set; }
     public bool IsShared { get; set; }
+    public string Module { get; set; } = "Acquisition";
     public List<ViewFieldSelection> Fields { get; set; } = new();
 }
 
@@ -25,4 +26,9 @@ public class ViewFieldSelection
     public bool IsSelected { get; set; }
     public int DisplayOrder { get; set; }
     public int? ViewFieldID { get; set; }
+}
+
+public static class ViewConstants
+{
+    public const int MaxDisplayColumns = 25;
 }

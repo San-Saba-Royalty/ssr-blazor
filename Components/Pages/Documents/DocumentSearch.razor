@@ -271,7 +271,7 @@
         // Format: {DocuShareAddress}dsweb/Get/{FileId}/{FileName}
         if (!string.IsNullOrEmpty(result.FileId))
         {
-            return $"#document/{result.FileId}";
+            return $"/document/{result.FileId}";
         }
         return "#";
     }

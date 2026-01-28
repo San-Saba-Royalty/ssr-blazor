@@ -1,14 +1,382 @@
 @page "/documents/barcodes/acquisition"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
+@using MudBlazor
+@using SSRBusiness.BusinessClasses
+@using SSRBusiness.Entities
+@using SSRBusiness.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<SsrDbContext> DbContextFactory
+@inject CoverSheetService CoverSheetService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @attribute [Authorize]
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h5" GutterBottom="true">Acquisition Barcode</MudText>
-        <MudAlert Severity="Severity.Info">This feature is currently under development.</MudAlert>
-        <MudText Class="mt-4">Barcode generation for Acquisition Documents will be implemented here.</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="@(() => _navigationManager.NavigateTo("/documents"))">Back to Documents</MudButton>
+<PageTitle>Generate Acquisition Barcode Cover Sheets</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">Generate Acquisition Barcode Cover Sheets</MudText>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" CloseIconClicked="@(() => _errorMessage = null)" CloseIcon="@Icons.Material.Filled.Close">@_errorMessage</MudAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4" CloseIconClicked="@(() => _successMessage = null)" CloseIcon="@Icons.Material.Filled.Close">@_successMessage</MudAlert>
+        }
+
+        <MudForm @ref="_form">
+            @* First Barcode Entry *@
+            <MudGrid>
+                <MudItem xs="12" sm="3">
+                    <MudTextField @bind-Value="_acquisitionId"
+                                  Label="Acquisition ID"
+                                  Required="true"
+                                  RequiredError="Required"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect @bind-Value="_documentType"
+                               Label="Document Type"
+                               Required="true"
+                               RequiredError="Required"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem Value="@string.Empty">-- Select One --</MudSelectItem>
+                        @foreach (var docType in _documentTypes)
+                        {
+                            <MudSelectItem Value="@docType.DocumentTypeCode">@docType.DocumentTypeDesc</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudTextField @bind-Value="_description"
+                                  Label="Description"
+                                  Required="true"
+                                  RequiredError="Required"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="2">
+                    <MudNumericField @bind-Value="_numberCopies"
+                                     Label="Copies"
+                                     Required="true"
+                                     Min="1"
+                                     Max="100"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+
+            @* Additional Barcode Entries *@
+            @foreach (var (entry, index) in _additionalEntries.Select((e, i) => (e, i)))
+            {
+                <MudGrid Class="mt-2">
+                    <MudItem xs="12" sm="3">
+                        <MudTextField @bind-Value="entry.AcquisitionId"
+                                      Label="Acquisition ID"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudSelect @bind-Value="entry.DocumentType"
+                                   Label="Document Type"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense">
+                            <MudSelectItem Value="@string.Empty">-- Select One --</MudSelectItem>
+                            @foreach (var docType in _documentTypes)
+                            {
+                                <MudSelectItem Value="@docType.DocumentTypeCode">@docType.DocumentTypeDesc</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudTextField @bind-Value="entry.Description"
+                                      Label="Description"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="1">
+                        <MudNumericField @bind-Value="entry.NumberCopies"
+                                         Label="Copies"
+                                         Min="1"
+                                         Max="100"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="1" Class="d-flex align-center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       OnClick="@(() => RemoveEntry(index))"
+                                       Size="Size.Small" />
+                    </MudItem>
+                </MudGrid>
+            }
+
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="AddEntry">
+                    Add Another Barcode
+                </MudButton>
+            </MudStack>
+
+            <MudDivider Class="my-4" />
+
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="GenerateBarcodes"
+                           Disabled="_isGenerating">
+                    @if (_isGenerating)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Generating...</span>
+                    }
+                    else
+                    {
+                        <span>Generate Barcode Cover Sheet(s)</span>
+                    }
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           OnClick="Cancel">
+                    Cancel
+                </MudButton>
+            </MudStack>
+        </MudForm>
     </MudPaper>
 </MudContainer>
 
-@inject NavigationManager _navigationManager
+@code {
+    private MudForm? _form;
+    private string _acquisitionId = string.Empty;
+    private string _documentType = string.Empty;
+    private string _description = string.Empty;
+    private int _numberCopies = 1;
+    private bool _isGenerating = false;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private List<DocumentTypeListItem> _documentTypes = new();
+    private List<BarcodeEntry> _additionalEntries = new();
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "aid")]
+    public string? AcquisitionIdParam { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Pre-fill acquisition ID if provided via query string
+        if (!string.IsNullOrEmpty(AcquisitionIdParam))
+        {
+            _acquisitionId = AcquisitionIdParam;
+        }
+
+        // Load document types
+        await LoadDocumentTypes();
+    }
+
+    private async Task LoadDocumentTypes()
+    {
+        try
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            var repo = new AcquisitionDocumentRepository(context);
+            var documentTypes = await repo.GetDocumentTypesAsync().ToListAsync();
+            _documentTypes = documentTypes.Select(dt => new DocumentTypeListItem
+                {
+                    DocumentTypeCode = dt.DocumentTypeCode,
+                    DocumentTypeDesc = dt.DocumentTypeDesc ?? string.Empty
+                }).ToList();
+
+            // Add Miscellaneous option
+            _documentTypes.Add(new DocumentTypeListItem
+                {
+                    DocumentTypeCode = "Miscellaneous",
+                    DocumentTypeDesc = "Miscellaneous"
+                });
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading document types: {ex.Message}";
+        }
+    }
+
+    private void AddEntry()
+    {
+        _additionalEntries.Add(new BarcodeEntry());
+    }
+
+    private void RemoveEntry(int index)
+    {
+        if (index >= 0 && index < _additionalEntries.Count)
+        {
+            _additionalEntries.RemoveAt(index);
+        }
+    }
+
+    private async Task GenerateBarcodes()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        // Validate form
+        if (_form != null)
+        {
+            await _form.Validate();
+            if (!_form.IsValid) return;
+        }
+
+        // Build list of barcode requests
+        var requests = new List<BarcodeDocumentRequest>();
+
+        // Validate and add first entry
+        if (!ValidateAndAddRequest(_acquisitionId, _documentType, _description, _numberCopies, requests, out var error))
+        {
+            _errorMessage = error;
+            return;
+        }
+
+        // Validate and add additional entries
+        foreach (var entry in _additionalEntries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.AcquisitionId))
+            {
+                if (!ValidateAndAddRequest(entry.AcquisitionId, entry.DocumentType, entry.Description, entry.NumberCopies, requests, out error))
+                {
+                    _errorMessage = error;
+                    return;
+                }
+            }
+        }
+
+        if (requests.Count == 0)
+        {
+            _errorMessage = "Please enter at least one valid barcode entry.";
+            return;
+        }
+
+        _isGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            // Validate all acquisitions exist
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            var acqRepo = new AcquisitionRepository(context);
+
+            foreach (var request in requests)
+            {
+                var acquisition = await acqRepo.LoadAcquisitionByAcquisitionIDAsync(request.AcquisitionID);
+                if (acquisition == null)
+                {
+                    _errorMessage = $"Acquisition ID {request.AcquisitionID} does not exist. Please enter a valid acquisition ID.";
+                    return;
+                }
+            }
+
+            // Get current user from authentication context
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User.Identity?.Name;
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userName))
+            {
+                var userRepo = new UserRepository(context);
+                currentUser = await userRepo.LoadUserByUserNameAsync(userName);
+            }
+
+            // Generate the barcode cover sheets
+            var result = await CoverSheetService.GenerateAcquisitionBarcodeCoverSheetsAsync(
+                requests,
+                userName ?? "Unknown User",
+                currentUser);
+
+            // Trigger download
+            await JSRuntime.InvokeVoidAsync("open", result.DownloadUrl, "_blank");
+
+            _successMessage = $"Barcode cover sheet(s) generated successfully! ({requests.Count} barcode(s), {requests.Sum(r => r.NumberCopies)} total pages)";
+
+            // Clear form
+            _acquisitionId = string.Empty;
+            _documentType = string.Empty;
+            _description = string.Empty;
+            _numberCopies = 1;
+            _additionalEntries.Clear();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error generating barcode cover sheets: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateAndAddRequest(string acqId, string docType, string desc, int copies, List<BarcodeDocumentRequest> requests, out string? error)
+    {
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(acqId) || !int.TryParse(acqId, out int acquisitionId))
+        {
+            error = "You must enter a valid acquisition ID.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(docType))
+        {
+            error = "You must select a document type.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(desc))
+        {
+            error = "You must enter a description for the document.";
+            return false;
+        }
+
+        if (copies < 1 || copies > 100)
+        {
+            error = "Number of copies must be between 1 and 100.";
+            return false;
+        }
+
+        requests.Add(new BarcodeDocumentRequest
+            {
+                AcquisitionID = acquisitionId,
+                DocumentTypeCode = docType,
+                DocumentDescription = desc,
+                NumberCopies = copies
+            });
+
+        return true;
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/documents");
+    }
+
+    private class BarcodeEntry
+    {
+        public string AcquisitionId { get; set; } = string.Empty;
+        public string DocumentType { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int NumberCopies { get; set; } = 1;
+    }
+
+    private class DocumentTypeListItem
+    {
+        public string DocumentTypeCode { get; set; } = string.Empty;
+        public string DocumentTypeDesc { get; set; } = string.Empty;
+    }
+}

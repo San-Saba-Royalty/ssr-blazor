@@ -11,100 +11,88 @@
 @* Messages *@
 @if (!string.IsNullOrEmpty(_displayMessage))
 {
-    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _displayMessage = null)">
-        @_displayMessage
-    </MudAlert>
+    <MudAlert Severity="Severity.Success" Class="mb-4" ShowCloseIcon="true"
+    CloseIconClicked="@(() => _displayMessage = null)">
+    @_displayMessage
+</MudAlert>
 }
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
     <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-        @_errorMessage
-    </MudAlert>
+    @_errorMessage
+</MudAlert>
 }
 
 <MudText Typo="Typo.h4" Class="mb-4">Operators</MudText>
 
-<MudDataGrid @ref="_dataGrid"
-             T="Operator"
-             ServerData="LoadServerData"
-             Dense="true"
-             Hover="true"
-             Striped="true"
-             Bordered="true"
-             FixedHeader="true"
-             Height="calc(100vh - 250px)"
-             RowClick="OnRowClick"
-             SelectedItem="_selectedItem"
-             RowStyleFunc="@RowStyleFunc"
-             Filterable="true"
-             FilterMode="DataGridFilterMode.ColumnFilterRow"
-             SortMode="SortMode.Multiple">
+<MudDataGrid @ref="_dataGrid" T="Operator" ServerData="LoadServerData" Dense="true" Hover="true" Striped="true"
+    Bordered="true" FixedHeader="true" Height="calc(100vh - 250px)" RowClick="OnRowClick" SelectedItem="_selectedItem"
+    RowStyleFunc="@RowStyleFunc" Filterable="true" FilterMode="DataGridFilterMode.ColumnFilterRow"
+    SortMode="SortMode.Multiple">
     <ToolBarContent>
         <MudStack Row="true" Spacing="2">
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary" 
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="AddNewOperator">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                OnClick="AddNewOperator">
                 Add
             </MudButton>
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Secondary" 
-                       StartIcon="@Icons.Material.Filled.Edit"
-                       OnClick="EditSelectedOperator"
-                       Disabled="@(_selectedItem == null)">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit"
+                OnClick="EditSelectedOperator" Disabled="@(_selectedItem == null)">
                 Edit
             </MudButton>
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Error" 
-                       StartIcon="@Icons.Material.Filled.Delete"
-                       OnClick="DeleteSelectedOperator"
-                       Disabled="@(_selectedItem == null)">
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                OnClick="DeleteSelectedOperator" Disabled="@(_selectedItem == null)">
                 Delete
             </MudButton>
             <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
-            <MudButton Variant="Variant.Outlined" 
-                       StartIcon="@Icons.Material.Filled.Receipt"
-                       OnClick="OpenCheckStatement"
-                       Disabled="@(_selectedItem == null)">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Receipt"
+                OnClick="OpenCheckStatement" Disabled="@(_selectedItem == null)">
                 Check Statement
             </MudButton>
             <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
-            <MudButton Variant="Variant.Outlined" 
-                       StartIcon="@Icons.Material.Filled.FileDownload"
-                       OnClick="ExportToExcel">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FileDownload"
+                OnClick="ExportToExcel">
                 Export
             </MudButton>
         </MudStack>
+        <MudSelect T="int?" Label="View" Value="_selectedViewId" ValueChanged="OnViewSelected" Dense="true"
+            Margin="Margin.Dense" Variant="Variant.Outlined" Class="mx-2" Style="width: 200px;">
+            <MudSelectItem T="int?" Value="@((int?)null)">Default</MudSelectItem>
+            @foreach (var view in _availableViews)
+            {
+                <MudSelectItem T="int?" Value="@((int?)view.ViewID)">@view.ViewName</MudSelectItem>
+            }
+        </MudSelect>
+        <MudIconButton Icon="@Icons.Material.Filled.ViewColumn" OnClick="OpenColumnOrdering" Title="Customize Columns"
+            Disabled="@(!_selectedViewId.HasValue)" Color="Color.Primary" />
         <MudSpacer />
         <MudText Typo="Typo.caption" Class="mr-4">
             Total: @_totalCount operators
         </MudText>
         <MudStack Row="true" Spacing="2">
-            <MudButton Variant="Variant.Text" 
-                       StartIcon="@Icons.Material.Filled.FilterAltOff" 
-                       OnClick="ResetFilters">
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.FilterAltOff" OnClick="ResetFilters">
                 Reset Filters
             </MudButton>
-            <MudButton Variant="Variant.Text" 
-                       StartIcon="@Icons.Material.Filled.SortByAlpha" 
-                       OnClick="ResetSort">
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.SortByAlpha" OnClick="ResetSort">
                 Reset Sort
             </MudButton>
         </MudStack>
     </ToolBarContent>
     <Columns>
         <PropertyColumn Property="x => x.OperatorID" Title="ID" Hidden="true" />
-        
-        <PropertyColumn Property="x => x.OperatorName" Title="Operator Name" Sortable="true" Filterable="true">
+
+        <PropertyColumn Property="x => x.OperatorName" Title="Operator Name" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("OperatorName"))">
             <FooterTemplate>
                 Count: @context.Items.Count()
             </FooterTemplate>
         </PropertyColumn>
-        
-        <PropertyColumn Property="x => x.ContactName" Title="Contact Name" Sortable="true" Filterable="true" />
-        
-        <TemplateColumn Title="Contact Email" Sortable="true" Filterable="true" SortBy="@(x => x.ContactEmail)">
+
+        <PropertyColumn Property="x => x.ContactName" Title="Contact Name" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("ContactName"))" />
+
+        <TemplateColumn Title="Contact Email" Sortable="true" Filterable="true" SortBy="@(x => x.ContactEmail)"
+            Hidden="@(!IsColumnVisible("Email"))">
             <CellTemplate>
                 @if (!string.IsNullOrEmpty(context.Item.ContactEmail))
                 {
@@ -114,8 +102,9 @@
                 }
             </CellTemplate>
         </TemplateColumn>
-        
-        <TemplateColumn Title="Contact Phone" Sortable="true" Filterable="true" SortBy="@(x => x.ContactPhone)">
+
+        <TemplateColumn Title="Contact Phone" Sortable="true" Filterable="true" SortBy="@(x => x.ContactPhone)"
+            Hidden="@(!IsColumnVisible("Phone"))">
             <CellTemplate>
                 @if (!string.IsNullOrEmpty(context.Item.ContactPhone))
                 {
@@ -125,20 +114,24 @@
                 }
             </CellTemplate>
         </TemplateColumn>
-        
-        <PropertyColumn Property="x => x.ContactFax" Title="Contact Fax" Sortable="true" Filterable="true" />
-        
-        <TemplateColumn Title="Address" Sortable="false" Filterable="false">
+
+        <PropertyColumn Property="x => x.ContactFax" Title="Contact Fax" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("Fax"))" />
+
+        <TemplateColumn Title="Address" Sortable="false" Filterable="false" Hidden="@(!IsColumnVisible("Address"))">
             <CellTemplate>
                 @GetFullAddress(context.Item)
             </CellTemplate>
         </TemplateColumn>
-        
-        <PropertyColumn Property="x => x.City" Title="City" Sortable="true" Filterable="true" />
-        
-        <PropertyColumn Property="x => x.StateCode" Title="State" Sortable="true" Filterable="true" />
-        
-        <PropertyColumn Property="x => x.ZipCode" Title="Zip Code" Sortable="true" Filterable="true" />
+
+        <PropertyColumn Property="x => x.City" Title="City" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("City"))" />
+
+        <PropertyColumn Property="x => x.StateCode" Title="State" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("State"))" />
+
+        <PropertyColumn Property="x => x.ZipCode" Title="Zip Code" Sortable="true" Filterable="true"
+            Hidden="@(!IsColumnVisible("Zip"))" />
     </Columns>
     <PagerContent>
         <MudDataGridPager T="Operator" PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
@@ -155,13 +148,16 @@
 <MudMenu @ref="_contextMenu" PositionAtCursor="true" Dense="true">
     <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="AddNewOperator">Add</MudMenuItem>
     <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="EditSelectedOperator">Edit</MudMenuItem>
-    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="DeleteSelectedOperator">Delete</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="DeleteSelectedOperator">Delete
+    </MudMenuItem>
     <MudDivider />
-    <MudMenuItem Icon="@Icons.Material.Filled.Receipt" OnClick="OpenCheckStatement">Check Statement Cover Sheet</MudMenuItem>
+    <MudMenuItem Icon="@Icons.Material.Filled.Receipt" OnClick="OpenCheckStatement">Check Statement Cover Sheet
+    </MudMenuItem>
 </MudMenu>
 
 @* Delete Confirmation Dialog *@
-<MudDialog @bind-Visible="_showDeleteDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+<MudDialog @bind-Visible="_showDeleteDialog"
+    Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
@@ -190,7 +186,8 @@
 </MudDialog>
 
 @* Check Statement Cover Sheet Dialog *@
-<MudDialog @bind-Visible="_showCheckStatementDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+<MudDialog @bind-Visible="_showCheckStatementDialog"
+    Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
@@ -203,7 +200,7 @@
             <MudText Class="mb-4">
                 Generate check statement cover sheet for: <strong>@_selectedItem.OperatorName</strong>
             </MudText>
-            
+
             @if (_isGeneratingCheckStatement)
             {
                 <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
@@ -214,11 +211,8 @@
                 <MudAlert Severity="Severity.Success" Class="mb-4">
                     Document generated successfully!
                 </MudAlert>
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           StartIcon="@Icons.Material.Filled.Download"
-                           OnClick="DownloadCheckStatement"
-                           FullWidth="true">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download"
+                    OnClick="DownloadCheckStatement" FullWidth="true">
                     Download Cover Sheet
                 </MudButton>
             }

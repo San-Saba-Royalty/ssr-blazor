@@ -1,0 +1,41 @@
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using MudBlazor
+@using Microsoft.EntityFrameworkCore
+@inject BuyerRepository BuyerRepo
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@AcquisitionBuyer" OnValidSubmit="Submit">
+             <DataAnnotationsValidator />
+             <MudSelect T="int" Label="Buyer" @bind-Value="AcquisitionBuyer.BuyerID" Required="true" RequiredError="Buyer is required">
+                 @foreach (var buyer in _buyers)
+                 {
+                     <MudSelectItem Value="@buyer.BuyerID">@buyer.BuyerName</MudSelectItem>
+                 }
+             </MudSelect>
+             <!-- Add other fields if AcquisitionBuyer has more properties, e.g. defined dates? 
+                  Current Entity only has AcquisitionID, BuyerID. -->
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AcquisitionBuyer AcquisitionBuyer { get; set; } = new();
+
+    private List<Buyer> _buyers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _buyers = await (await BuyerRepo.GetBuyersAsync()).ToListAsync();
+    }
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(AcquisitionBuyer));
+    private void Cancel() => MudDialog.Cancel();
+}

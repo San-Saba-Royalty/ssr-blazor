@@ -6,11 +6,16 @@
 @using SSRBusiness.Entities
 @using SSRBlazor.Services
 
+@using Microsoft.AspNetCore.Components.Authorization
+
 @inject AcquisitionService AcquisitionService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ViewService ViewService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SessionStateService SessionStateService
 
 <PageTitle>Mineral Acquisitions</PageTitle>
 
@@ -70,14 +75,16 @@
             <MudMenu Label="@_activeView" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary">
                 @foreach (var view in _availableViews)
                 {
-                    <MudMenuItem OnClick="@(() => ApplyView(view.Name))">
-                        @if (view.Name == _activeView)
+                    <MudMenuItem OnClick="@(() => OnViewSelected(view.ViewID))">
+                        @if (view.ViewName == _activeView)
                         {
                             <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-2" />
                         }
-                        @view.Name
+                        @view.ViewName
                     </MudMenuItem>
                 }
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => OnViewSelected(null))">Default View</MudMenuItem>
             </MudMenu>
         </MudStack>
         
@@ -155,6 +162,14 @@
                     <MudIconButton Icon="@Icons.Material.Filled.FileDownload" 
                                    Color="Color.Success"
                                    OnClick="@ExportToExcel" />
+                </MudTooltip>
+                
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+                <MudTooltip Text="Column Ordering">
+                     <MudIconButton Icon="@Icons.Material.Filled.ViewColumn" 
+                                    Color="Color.Default" 
+                                    OnClick="@OpenColumnOrdering" />
                 </MudTooltip>
             </MudStack>
             <MudSpacer />
@@ -418,6 +433,7 @@
                               PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
         </PagerContent>
         
+
         <NoRecordsContent>
             <MudText Typo="Typo.body1">No acquisitions found matching the current filter.</MudText>
         </NoRecordsContent>
@@ -445,3 +461,4 @@
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@ConfirmGenerateBarcode">Generate</MudButton>
     </DialogActions>
 </MudDialog>
+

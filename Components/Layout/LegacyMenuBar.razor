@@ -43,7 +43,7 @@
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_SAVE))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_SAVE))">Save</MudMenuItem>
         <MudDivider />
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_PRINT))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_PRINT))">Print</MudMenuItem>
-        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_TAX_ROLL_SEARCH))">Tax Roll Search</MudMenuItem>
+
         <MudDivider />
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_GOTO_LAST_ACQ))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_GOTO_LAST_ACQ))">Goto Last Acquisition</MudMenuItem>
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_FILE_GOTO_LAST_LETTERAGREEMENT))" Disabled="@(!IsEnabled(ActionCommands.MNU_FILE_GOTO_LAST_LETTERAGREEMENT))">Goto Last Letter Agreement</MudMenuItem>
@@ -74,8 +74,7 @@
     @* DOCUMENTS MENU *@
     <MudMenu Label="Documents" Dense="true" EndIcon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomLeft">
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_TEMPLATES))">Templates</MudMenuItem>
-        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_BARCODE_ACQUISITION_DOCUMENT))">Generate Acquisition Cover Sheet</MudMenuItem>
-        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_BARCODE_CHECK_STATEMENT))">Generate Check Statement Cover Sheet</MudMenuItem>
+
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_DOCUMENTS_SEARCH))">Search</MudMenuItem>
     </MudMenu>
 
@@ -104,7 +103,7 @@
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_CURATIVE_TYPES))">Curative Types</MudMenuItem>
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_DEAL_STATUSES))">Deal Statuses</MudMenuItem>
         <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_LETTERAGREEMENT_DEAL_STATUSES))">Letter Agreement Deal Statuses</MudMenuItem>
-        <MudMenuItem OnClick="@(() => Execute(ActionCommands.MNU_TOOLS_FOLDER_LOCATIONS))">Folder Locations</MudMenuItem>
+
     </MudMenu>
 
     @* ADMINISTRATION MENU *@

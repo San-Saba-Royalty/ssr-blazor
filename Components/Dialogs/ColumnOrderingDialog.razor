@@ -1,0 +1,97 @@
+@using SSRBlazor.Models
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Reorder the columns that will be displayed in this view. Top items appear first (leftmost).
+            <br />
+            <strong>Limit: @ViewConstants.MaxDisplayColumns columns</strong>
+        </MudText>
+
+        <MudList T="ViewFieldSelection" Dense="true" SelectionMode="SelectionMode.SingleSelection" @bind-SelectedValue="_selectedField">
+            @foreach (var field in _orderedFields)
+            {
+                <MudListItem Value="@field">
+                    <div class="d-flex justify-center align-center">
+                        <MudText>@field.DisplayName</MudText>
+                        <MudSpacer />
+                        @if (_orderedFields.IndexOf(field) > 0)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" OnClick="@(() => MoveUp(field))" />
+                        }
+                        @if (_orderedFields.IndexOf(field) < _orderedFields.Count - 1)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" OnClick="@(() => MoveDown(field))" />
+                        }
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+        
+        @if (_orderedFields.Count > ViewConstants.MaxDisplayColumns)
+        {
+             <MudAlert Severity="Severity.Warning" Class="mt-2">
+                 You have selected @_orderedFields.Count columns. Only the first @ViewConstants.MaxDisplayColumns will be displayed.
+             </MudAlert>
+        }
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save Order</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public List<ViewFieldSelection> Fields { get; set; } = new();
+
+    private List<ViewFieldSelection> _orderedFields = new();
+    private ViewFieldSelection _selectedField;
+
+    protected override void OnInitialized()
+    {
+        // Only include selected fields for ordering, or all?
+        // Usually we order the selected ones.
+        _orderedFields = Fields.Where(f => f.IsSelected).OrderBy(f => f.DisplayOrder).ToList();
+    }
+
+    private void MoveUp(ViewFieldSelection field)
+    {
+        var index = _orderedFields.IndexOf(field);
+        if (index > 0)
+        {
+            _orderedFields.RemoveAt(index);
+            _orderedFields.Insert(index - 1, field);
+        }
+    }
+
+    private void MoveDown(ViewFieldSelection field)
+    {
+        var index = _orderedFields.IndexOf(field);
+        if (index < _orderedFields.Count - 1)
+        {
+            _orderedFields.RemoveAt(index);
+            _orderedFields.Insert(index + 1, field);
+        }
+    }
+
+    private void Submit()
+    {
+        // Update DisplayOrder based on new list order
+        for (int i = 0; i < _orderedFields.Count; i++)
+        {
+            _orderedFields[i].DisplayOrder = i + 1;
+        }
+        
+        // Return the re-ordered list, or just signal success?
+        // Since we modified the objects in _orderedFields which are references from Fields (if passed by ref),
+        // let's verify. List filter creates new list but objects are same refs.
+        // But to be safe, we pass back the ordered list.
+        MudDialog.Close(DialogResult.Ok(_orderedFields));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

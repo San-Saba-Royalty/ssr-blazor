@@ -224,6 +224,9 @@ public class ActionService : IActionService
                 ActionCommands.MNU_DOCUMENTS_TEMPLATES =>
                     ActionResult.SuccessResult(navigateToUrl: "/documents/templates"),
 
+                ActionCommands.MNU_DOCUMENTS_ACQUISITION_COVER_SHEET =>
+                    ActionResult.SuccessResult(navigateToUrl: "/documents/cover-sheet/acquisition"),
+
                 ActionCommands.MNU_DOCUMENTS_BARCODE_ACQUISITION_DOCUMENT =>
                      ActionResult.SuccessResult(navigateToUrl: "/documents/barcodes/acquisition"),
 
