@@ -10,10 +10,9 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: tribehealth/ssrblazor
-  # Use vars for non-sensitive data (recommended 2024-2025 practice)
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
-  GKE_CLUSTER_NAME: ${{ vars.GKE_CLUSTER_NAME || secrets.GKE_CLUSTER_NAME }}
-  GKE_CLUSTER_LOCATION: ${{ vars.GKE_CLUSTER_LOCATION || secrets.GKE_CLUSTER_LOCATION }}
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
+  GKE_CLUSTER_LOCATION: ${{ secrets.GKE_CLUSTER_LOCATION }}
 
 jobs:
   # Build and push Docker image
@@ -95,9 +94,12 @@ jobs:
 
     - name: Get GKE cluster credentials
       run: |
-        gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
-          --location=${{ env.GKE_CLUSTER_LOCATION }} \
-          --project=${{ env.GCP_PROJECT_ID }}
+        echo "Getting credentials for cluster: '${{ env.GKE_CLUSTER_NAME }}'"
+        echo "In location: '${{ env.GKE_CLUSTER_LOCATION }}'"
+        echo "For project: '${{ env.GCP_PROJECT_ID }}'"
+        gcloud container clusters get-credentials "${{ env.GKE_CLUSTER_NAME }}" \
+          --location="${{ env.GKE_CLUSTER_LOCATION }}" \
+          --project="${{ env.GCP_PROJECT_ID }}"
 
     - name: Set up OpenTofu
       uses: opentofu/setup-opentofu@v1
@@ -195,9 +197,12 @@ jobs:
 
     - name: Get GKE cluster credentials
       run: |
-        gcloud container clusters get-credentials ${{ env.GKE_CLUSTER_NAME }} \
-          --location=${{ env.GKE_CLUSTER_LOCATION }} \
-          --project=${{ env.GCP_PROJECT_ID }}
+        echo "Getting credentials for cluster: '${{ env.GKE_CLUSTER_NAME }}'"
+        echo "In location: '${{ env.GKE_CLUSTER_LOCATION }}'"
+        echo "For project: '${{ env.GCP_PROJECT_ID }}'"
+        gcloud container clusters get-credentials "${{ env.GKE_CLUSTER_NAME }}" \
+          --location="${{ env.GKE_CLUSTER_LOCATION }}" \
+          --project="${{ env.GCP_PROJECT_ID }}"
 
     - name: Set up OpenTofu
       uses: opentofu/setup-opentofu@v1
