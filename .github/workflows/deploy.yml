@@ -105,6 +105,57 @@ jobs:
           --location="${{ env.GKE_CLUSTER_LOCATION }}" \
           --project="${{ env.GCP_PROJECT_ID }}"
 
+    - name: Install cert-manager (for planning)
+      run: |
+        # Check if cert-manager is already installed
+        if ! kubectl get namespace cert-manager >/dev/null 2>&1; then
+          echo "Installing cert-manager for planning..."
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+
+          # Wait for cert-manager to be ready (shorter timeout for PR planning)
+          echo "Waiting for cert-manager to be ready..."
+          kubectl wait --for=condition=Available deployment/cert-manager -n cert-manager --timeout=180s
+          kubectl wait --for=condition=Available deployment/cert-manager-webhook -n cert-manager --timeout=180s
+          kubectl wait --for=condition=Available deployment/cert-manager-cainjector -n cert-manager --timeout=180s
+        else
+          echo "cert-manager already installed"
+        fi
+
+    - name: Create Let's Encrypt ClusterIssuers (for planning)
+      run: |
+        # Apply the ClusterIssuer configuration for planning
+        kubectl apply -f - <<EOF
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: letsencrypt-prod
+        spec:
+          acme:
+            server: https://acme-v02.api.letsencrypt.org/directory
+            email: admin@prometheusags.ai
+            privateKeySecretRef:
+              name: letsencrypt-prod
+            solvers:
+            - http01:
+                ingress:
+                  class: nginx
+        ---
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: letsencrypt-staging
+        spec:
+          acme:
+            server: https://acme-staging-v02.api.letsencrypt.org/directory
+            email: admin@prometheusags.ai
+            privateKeySecretRef:
+              name: letsencrypt-staging
+            solvers:
+            - http01:
+                ingress:
+                  class: nginx
+        EOF
+
     - name: Set up OpenTofu
       uses: opentofu/setup-opentofu@v1
       with:
@@ -132,17 +183,12 @@ jobs:
 
     - name: Create terraform.tfvars
       working-directory: ./deployment/opentofu
-      env:
-        TLS_CERT_DATA: ${{ secrets.TLS_CERT_DATA }}
-        TLS_KEY_DATA: ${{ secrets.TLS_KEY_DATA }}
       run: |
         cat > terraform.tfvars << EOF
         gcp_project_id       = "${{ env.GCP_PROJECT_ID }}"
         gcp_region          = "us-central1"
         gke_cluster_name    = "${{ env.GKE_CLUSTER_NAME }}"
         gke_cluster_location = "${{ env.GKE_CLUSTER_LOCATION }}"
-        tls_cert_data       = "$TLS_CERT_DATA"
-        tls_key_data        = "$TLS_KEY_DATA"
         EOF
 
     - name: Validate OpenTofu configuration
@@ -227,6 +273,57 @@ jobs:
           --location="${{ env.GKE_CLUSTER_LOCATION }}" \
           --project="${{ env.GCP_PROJECT_ID }}"
 
+    - name: Install cert-manager
+      run: |
+        # Check if cert-manager is already installed
+        if ! kubectl get namespace cert-manager >/dev/null 2>&1; then
+          echo "Installing cert-manager..."
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+
+          # Wait for cert-manager to be ready
+          echo "Waiting for cert-manager to be ready..."
+          kubectl wait --for=condition=Available deployment/cert-manager -n cert-manager --timeout=300s
+          kubectl wait --for=condition=Available deployment/cert-manager-webhook -n cert-manager --timeout=300s
+          kubectl wait --for=condition=Available deployment/cert-manager-cainjector -n cert-manager --timeout=300s
+        else
+          echo "cert-manager already installed"
+        fi
+
+    - name: Create Let's Encrypt ClusterIssuers
+      run: |
+        # Apply the ClusterIssuer configuration
+        kubectl apply -f - <<EOF
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: letsencrypt-prod
+        spec:
+          acme:
+            server: https://acme-v02.api.letsencrypt.org/directory
+            email: admin@prometheusags.ai
+            privateKeySecretRef:
+              name: letsencrypt-prod
+            solvers:
+            - http01:
+                ingress:
+                  class: nginx
+        ---
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: letsencrypt-staging
+        spec:
+          acme:
+            server: https://acme-staging-v02.api.letsencrypt.org/directory
+            email: admin@prometheusags.ai
+            privateKeySecretRef:
+              name: letsencrypt-staging
+            solvers:
+            - http01:
+                ingress:
+                  class: nginx
+        EOF
+
     - name: Set up OpenTofu
       uses: opentofu/setup-opentofu@v1
       with:
@@ -268,17 +365,12 @@ jobs:
 
     - name: Create terraform.tfvars
       working-directory: ./deployment/opentofu
-      env:
-        TLS_CERT_DATA: ${{ secrets.TLS_CERT_DATA }}
-        TLS_KEY_DATA: ${{ secrets.TLS_KEY_DATA }}
       run: |
         cat > terraform.tfvars << EOF
         gcp_project_id       = "${{ env.GCP_PROJECT_ID }}"
         gcp_region          = "us-central1"
         gke_cluster_name    = "${{ env.GKE_CLUSTER_NAME }}"
         gke_cluster_location = "${{ env.GKE_CLUSTER_LOCATION }}"
-        tls_cert_data       = "$TLS_CERT_DATA"
-        tls_key_data        = "$TLS_KEY_DATA"
         EOF
 
     - name: Validate OpenTofu configuration

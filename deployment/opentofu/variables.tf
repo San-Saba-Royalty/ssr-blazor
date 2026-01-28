@@ -19,14 +19,4 @@ variable "gke_cluster_location" {
   type        = string
 }
 
-variable "tls_cert_data" {
-  description = "Base64 encoded TLS certificate data"
-  type        = string
-  sensitive   = true
-}
-
-variable "tls_key_data" {
-  description = "Base64 encoded TLS private key data"
-  type        = string
-  sensitive   = true
-}
+# TLS certificates are now automatically managed by cert-manager and Let's Encrypt

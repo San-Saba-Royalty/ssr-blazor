@@ -6,7 +6,10 @@
       "Bash(docker build:*)",
       "mcp__tavily-mcp__tavily-search",
       "Bash(docker pull:*)",
-      "Bash(kubectl get:*)"
+      "Bash(kubectl get:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(curl:*)"
     ]
   }
 }

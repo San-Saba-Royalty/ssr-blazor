@@ -9,7 +9,7 @@ resource "kubernetes_service_v1" "ssr_service" {
       app = "ssr-app"
     }
     port {
-      port        = 80
+      port        = 8080
       target_port = 8080
     }
     type = "ClusterIP"
