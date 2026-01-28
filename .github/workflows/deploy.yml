@@ -92,6 +92,10 @@ jobs:
     - name: Set up Google Cloud CLI
       uses: google-github-actions/setup-gcloud@v2
 
+    - name: Install GKE auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
+
     - name: Get GKE cluster credentials
       run: |
         echo "Getting credentials for cluster: '${{ env.GKE_CLUSTER_NAME }}'"
@@ -194,6 +198,10 @@ jobs:
 
     - name: Set up Google Cloud CLI
       uses: google-github-actions/setup-gcloud@v2
+
+    - name: Install GKE auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
 
     - name: Get GKE cluster credentials
       run: |
