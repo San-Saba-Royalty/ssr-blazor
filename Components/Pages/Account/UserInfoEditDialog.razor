@@ -1,37 +1,41 @@
-@page "/account/user-info"
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Components.Web
-@using SSRBlazor.Components
-@using MudBlazor
 @using SSRBusiness.Entities
 @using SSRBusiness.BusinessClasses
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
-@inject NavigationManager Navigation
-@inject ISnackbar Snackbar
+@using MudBlazor
 @inject UserRepository UserRepository
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudText Typo="Typo.h4" GutterBottom="true">Edit User Information</MudText>
-
-    @if (_loading)
-    {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    }
-    else if (User != null)
-    {
-        <UserInfoEditForm User="@User" OnSuccess="HandleSuccess" OnCancel="Cancel" />
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Error">User not found. Please log in.</MudAlert>
-    }
-</MudContainer>
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-3 mb-n1" />
+            Edit User Information
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="max-height: 60vh; overflow-y: auto; padding: 4px;">
+            @if (_loading)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_user != null)
+            {
+                <UserInfoEditForm User="@_user" OnSuccess="HandleSuccess" OnCancel="HandleCancel" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error">User not found.</MudAlert>
+            }
+        </div>
+    </DialogContent>
+</MudDialog>
 
 @code {
-    private User? User { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+
+    private User? _user;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -47,7 +51,7 @@
                 var userIdClaim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    User = await UserRepository.LoadUserByUserIdAsync(userId);
+                    _user = await UserRepository.LoadUserByUserIdAsync(userId);
                 }
             }
         }
@@ -63,9 +67,11 @@
 
     private void HandleSuccess()
     {
-        // Success message is handled by the form component snackbar
-        Navigation.NavigateTo("/");
+        MudDialog.Close(DialogResult.Ok(true));
     }
 
-    private void Cancel() => Navigation.NavigateTo("/");
+    private void HandleCancel()
+    {
+        MudDialog.Cancel();
+    }
 }

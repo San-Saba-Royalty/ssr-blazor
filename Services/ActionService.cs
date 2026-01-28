@@ -11,11 +11,7 @@ namespace SSRBlazor.Services;
 /// </summary>
 public class ActionService : IActionService
 {
-    private readonly NavigationManager _navigationManager;
-    private readonly AcquisitionService _acquisitionService;
-    private readonly LetterAgreementService _letterAgreementService;
-    private readonly FilterService _filterService;
-    private readonly ViewService _viewService;
+    private readonly IDialogService _dialogService;
     private readonly IDbContextFactory<SsrDbContext> _contextFactory;
 
     // Track last viewed items for "Back" navigation
@@ -36,6 +32,7 @@ public class ActionService : IActionService
         LetterAgreementService letterAgreementService,
         FilterService filterService,
         ViewService viewService,
+        IDialogService dialogService,
         IDbContextFactory<SsrDbContext> contextFactory)
     {
         _navigationManager = navigationManager;
@@ -43,6 +40,7 @@ public class ActionService : IActionService
         _letterAgreementService = letterAgreementService;
         _filterService = filterService;
         _viewService = viewService;
+        _dialogService = dialogService;
         _contextFactory = contextFactory;
     }
 
@@ -264,6 +262,8 @@ public class ActionService : IActionService
                 ActionCommands.MNU_REPORT_REFERRER_1099_SUMMARY =>
                      ActionResult.SuccessResult(navigateToUrl: "/reports?type=referrer1099"),
 
+                ActionCommands.MNU_ADMINISTRATION_EDIT_USER =>
+                     await HandleEditUserAsync(),
 
                 _ => ActionResult.ErrorResult($"Action '{actionCommand}' is not implemented")
             };
@@ -272,6 +272,13 @@ public class ActionService : IActionService
         {
             return ActionResult.ErrorResult($"Error executing action: {ex.Message}");
         }
+    }
+
+    private async Task<ActionResult> HandleEditUserAsync()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await _dialogService.ShowAsync<SSRBlazor.Components.Pages.Account.UserInfoEditDialog>("Edit User", options);
+        return ActionResult.SuccessResult();
     }
 
     public bool IsActionEnabled(string actionCommand, string? currentModule = null)

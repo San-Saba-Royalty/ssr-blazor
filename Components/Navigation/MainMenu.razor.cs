@@ -185,7 +185,7 @@ public partial class MainMenu : ComponentBase
                 Navigation.NavigateTo("/admin/users");
                 break;
             case "MNU_ADMINISTRATION_EDIT_USER":
-                Navigation.NavigateTo("/admin/users/edit");
+                await ActionService.ExecuteActionAsync(menuValue);
                 break;
 
             // View

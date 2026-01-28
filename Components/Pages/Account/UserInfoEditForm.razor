@@ -1,0 +1,101 @@
+@using SSRBusiness.Entities
+@using SSRBusiness.BusinessClasses
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@inject ISnackbar Snackbar
+@inject UserRepository UserRepository
+
+@if (User != null)
+{
+    <EditForm Model="@User" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        
+        <MudGrid>
+            <MudItem xs="12">
+                <MudCard Elevation="0">
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="User Name" @bind-Value="User.UserName" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="true" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Email" @bind-Value="User.Email" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="First Name" @bind-Value="User.FirstName" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Last Name" @bind-Value="User.LastName" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Title" @bind-Value="User.Title" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="6">
+                                <MudTextField Label="Phone Number" @bind-Value="User.PhoneNumber" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                 <MudText Typo="Typo.subtitle1" Class="mt-4">Change Password (Optional)</MudText>
+                                 <MudTextField Label="New Password" @bind-Value="_newPassword" 
+                                              InputType="InputType.Password" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                    <MudCardActions Class="pb-4 pl-4">
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mr-2">Update User</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="OnCancel">Cancel</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public User? User { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _newPassword = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        if (User != null)
+        {
+            try 
+            {
+                UserRepository.Update(User);
+                 
+                if (!string.IsNullOrWhiteSpace(_newPassword))
+                {
+                    await UserRepository.UpdatePasswordAsync(User.UserId, _newPassword);
+                }
+                else 
+                {
+                     await UserRepository.SaveChangesAsync();
+                }
+
+                Snackbar.Add("User information updated successfully!", Severity.Success);
+                if (OnSuccess.HasDelegate)
+                {
+                    await OnSuccess.InvokeAsync();
+                }
+            }
+            catch(Exception ex)
+            {
+                Snackbar.Add($"Error updating user information: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}
