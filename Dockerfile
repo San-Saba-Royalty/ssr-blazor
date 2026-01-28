@@ -19,17 +19,24 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy project files using relative paths from the solution root
-COPY ["SSRBlazor/SSRBlazor.csproj", "SSRBlazor/"]
-COPY ["SSRBusiness.NET10/SSRBusiness.csproj", "SSRBusiness.NET10/"]
-COPY ["DocSharp/src/DocSharp.Binary/DocSharp.Binary.Common/DocSharp.Binary.Common.csproj", "DocSharp/src/DocSharp.Binary/DocSharp.Binary.Common/"]
-COPY ["DocSharp/src/DocSharp.Binary/DocSharp.Binary.Doc/DocSharp.Binary.Doc.csproj", "DocSharp/src/DocSharp.Binary/DocSharp.Binary.Doc/"]
+# Install git to clone dependencies
+RUN apt-get update && \
+    apt-get install -y git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Restore dependencies
+# Clone external dependencies
+RUN git clone https://github.com/San-Saba-Royalty/ssr-business-net10.git SSRBusiness.NET10
+RUN git clone https://github.com/GQAdonis/DocSharp.git DocSharp
+
+# Copy the SSRBlazor project file first for better layer caching
+COPY ["SSRBlazor.csproj", "SSRBlazor/"]
+
+# Restore dependencies (this will now find the cloned projects)
 RUN dotnet restore "SSRBlazor/SSRBlazor.csproj"
 
-# Copy all source files
-COPY . .
+# Copy all SSRBlazor source files (the context is the current SSRBlazor directory)
+COPY . SSRBlazor/
 
 # Build the main project
 WORKDIR "/src/SSRBlazor"
@@ -37,6 +44,7 @@ RUN dotnet build "SSRBlazor.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Stage 3: Publish
 FROM build AS publish
+WORKDIR "/src/SSRBlazor"
 RUN dotnet publish "SSRBlazor.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Stage 4: Final
