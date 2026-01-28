@@ -7,7 +7,7 @@ resource "kubernetes_deployment_v1" "ssr_app" {
   }
 
   spec {
-    replicas = 2
+    replicas = 1
     selector {
       match_labels = { app = "ssr-app" }
     }
