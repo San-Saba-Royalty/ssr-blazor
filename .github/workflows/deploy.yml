@@ -10,9 +10,9 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: tribehealth/ssrblazor
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GKE_CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
-  GKE_CLUSTER_LOCATION: ${{ secrets.GKE_CLUSTER_LOCATION }}
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GKE_CLUSTER_NAME: ${{ vars.GKE_CLUSTER_NAME }}
+  GKE_CLUSTER_LOCATION: ${{ vars.GKE_CLUSTER_LOCATION }}
 
 jobs:
   # Build and push Docker image
