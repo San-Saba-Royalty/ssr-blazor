@@ -10,6 +10,12 @@ terraform {
       version = "~> 4.84"
     }
   }
+
+  # Backend configuration for state storage
+  backend "gcs" {
+    bucket = "terraform-state-prometheus-461323"
+    prefix = "ssr-blazor"
+  }
 }
 
 # Google Cloud Provider configuration

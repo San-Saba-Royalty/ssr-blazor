@@ -111,6 +111,21 @@ jobs:
         tofu_version: latest  # Updated to latest
         tofu_wrapper: false   # Better output handling
 
+    - name: Create Terraform state bucket
+      run: |
+        # Create GCS bucket for terraform state if it doesn't exist
+        BUCKET_NAME="terraform-state-${{ env.GCP_PROJECT_ID }}"
+
+        if ! gsutil ls -b gs://$BUCKET_NAME >/dev/null 2>&1; then
+          echo "Creating terraform state bucket: $BUCKET_NAME"
+          gsutil mb gs://$BUCKET_NAME
+
+          # Enable versioning for state file safety
+          gsutil versioning set on gs://$BUCKET_NAME
+        else
+          echo "Terraform state bucket already exists: $BUCKET_NAME"
+        fi
+
     - name: Initialize OpenTofu
       working-directory: ./deployment/opentofu
       run: tofu init
@@ -218,6 +233,35 @@ jobs:
         tofu_version: latest  # Updated to latest
         tofu_wrapper: false   # Better output handling
 
+    - name: Create Terraform state bucket
+      run: |
+        # Create GCS bucket for terraform state if it doesn't exist
+        BUCKET_NAME="terraform-state-${{ env.GCP_PROJECT_ID }}"
+
+        if ! gsutil ls -b gs://$BUCKET_NAME >/dev/null 2>&1; then
+          echo "Creating terraform state bucket: $BUCKET_NAME"
+          gsutil mb gs://$BUCKET_NAME
+
+          # Enable versioning for state file safety
+          gsutil versioning set on gs://$BUCKET_NAME
+
+          # Set lifecycle policy to keep only recent versions
+          echo '{
+            "lifecycle": {
+              "rule": [
+                {
+                  "action": {"type": "Delete"},
+                  "condition": {"numNewerVersions": 10}
+                }
+              ]
+            }
+          }' > lifecycle.json
+          gsutil lifecycle set lifecycle.json gs://$BUCKET_NAME
+          rm lifecycle.json
+        else
+          echo "Terraform state bucket already exists: $BUCKET_NAME"
+        fi
+
     - name: Initialize OpenTofu
       working-directory: ./deployment/opentofu
       run: tofu init
@@ -249,14 +293,44 @@ jobs:
       working-directory: ./deployment/opentofu
       run: tofu apply -auto-approve tfplan
 
-    - name: Update deployment image
+    - name: Debug and update deployment
       run: |
-        # Update the deployment to use the newly built image
+        # Debug: Check what resources exist
+        echo "=== Checking namespaces ==="
+        kubectl get namespaces | grep ssr || echo "No ssr namespace found"
+
+        echo "=== Checking resources in ssr namespace ==="
+        kubectl get all -n ssr || echo "No resources found in ssr namespace"
+
+        # Wait for deployment to be available (in case OpenTofu is still applying)
+        echo "=== Waiting for deployment to exist ==="
+        max_attempts=30
+        attempt=1
+
+        while [ $attempt -le $max_attempts ]; do
+          if kubectl get deployment ssr-deployment -n ssr >/dev/null 2>&1; then
+            echo "Deployment found on attempt $attempt"
+            break
+          fi
+          echo "Attempt $attempt: Deployment not found, waiting..."
+          sleep 10
+          ((attempt++))
+        done
+
+        if [ $attempt -gt $max_attempts ]; then
+          echo "ERROR: Deployment not found after $max_attempts attempts"
+          kubectl get all -n ssr
+          exit 1
+        fi
+
+        # Update the deployment to use the newly built image (using latest tag)
+        echo "=== Updating deployment image ==="
         kubectl set image deployment/ssr-deployment \
-          ssr-container=${{ needs.build.outputs.image-tag }} \
+          ssr-container=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
           -n ssr
 
         # Wait for rollout to complete
+        echo "=== Waiting for rollout to complete ==="
         kubectl rollout status deployment/ssr-deployment -n ssr --timeout=300s
 
     - name: Verify deployment

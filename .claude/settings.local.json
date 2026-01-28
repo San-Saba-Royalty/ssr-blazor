@@ -5,7 +5,8 @@
       "Bash(find:*)",
       "Bash(docker build:*)",
       "mcp__tavily-mcp__tavily-search",
-      "Bash(docker pull:*)"
+      "Bash(docker pull:*)",
+      "Bash(kubectl get:*)"
     ]
   }
 }
