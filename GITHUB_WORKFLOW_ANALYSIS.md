@@ -236,9 +236,8 @@ Replace basic curl with retry logic and comprehensive validation:
 
 ## Files Created
 
-1. **`deploy-improved.yml`** - Enhanced workflow with all best practices
-2. **`drift-detection.yml`** - Daily infrastructure drift monitoring
-3. **This analysis document** - Comprehensive review and recommendations
+1. **`deploy.yml`** - Updated main workflow with best practices
+2. **This analysis document** - Comprehensive review and recommendations
 
 ## Next Steps
 
