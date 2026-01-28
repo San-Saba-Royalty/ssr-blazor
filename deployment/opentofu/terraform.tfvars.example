@@ -1,0 +1,14 @@
+# GCP Configuration
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "us-central1"
+
+# GKE Cluster Configuration
+gke_cluster_name     = "your-gke-cluster-name"
+gke_cluster_location = "us-central1-a"  # Zone for zonal cluster or region for regional cluster
+
+# TLS Certificate Data (base64 encoded)
+# Generate these by base64 encoding your certificate files:
+# tls_cert_data = $(cat your-wildcard-cert.crt | base64 -w 0)
+# tls_key_data = $(cat your-wildcard-cert.key | base64 -w 0)
+tls_cert_data = "LS0tLS1CRUdJTi..."  # Your base64 encoded certificate
+tls_key_data  = "LS0tLS1CRUdJTi..."  # Your base64 encoded private key

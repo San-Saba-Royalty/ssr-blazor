@@ -24,4 +24,16 @@ public class SessionStateService
         var key = $"User_{userId}_View";
         return _cache.TryGetValue(key, out int viewId) ? viewId : null;
     }
+
+    public void SetLastAcquisitionId(string userId, int acquisitionId)
+    {
+        var key = $"User_{userId}_LastAcquisition";
+        _cache.Set(key, acquisitionId, TimeSpan.FromDays(30));
+    }
+
+    public int? GetLastAcquisitionId(string userId)
+    {
+        var key = $"User_{userId}_LastAcquisition";
+        return _cache.TryGetValue(key, out int acquisitionId) ? acquisitionId : null;
+    }
 }

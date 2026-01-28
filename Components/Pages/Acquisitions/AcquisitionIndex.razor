@@ -140,6 +140,12 @@
                                    Disabled="@(_selectedItem == null)"
                                    OnClick="@CopySelectedAcquisition" />
                 </MudTooltip>
+                
+                <MudTooltip Text="Go to Last Acquisition">
+                    <MudIconButton Icon="@Icons.Material.Filled.History" 
+                                   Color="Color.Secondary"
+                                   OnClick="@GotoLastAcquisition" />
+                </MudTooltip>
                 <MudTooltip Text="Delete Selected">
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                    Color="Color.Error"
@@ -190,13 +196,13 @@
             
             @* Acquisition Number *@
             <PropertyColumn Property="x => x.AcquisitionNumber" Title="Acq Number" 
-                            Hidden="@(!IsColumnVisible("AcquisitionNumber"))"
+                            Hidden="@(!IsColumnVisible("Acquisition Number"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 120px;" />
             
             @* Buyer *@
             <PropertyColumn Property="x => x.Buyer" Title="Buyer" 
-                            Hidden="@(!IsColumnVisible("Buyer"))"
+                            Hidden="@(!IsColumnVisible("Buyer Name"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 180px;" />
             
@@ -208,41 +214,41 @@
             
             @* Folder Location *@
             <PropertyColumn Property="x => x.FolderLocation" Title="Folder Location" 
-                            Hidden="@(!IsColumnVisible("FolderLocation"))"
+                            Hidden="@(!IsColumnVisible("Folder Location"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 180px;" />
             
             @* Effective Date *@
             <PropertyColumn Property="x => x.EffectiveDate" Title="Effective Date" 
-                            Hidden="@(!IsColumnVisible("EffectiveDate"))"
+                            Hidden="@(!IsColumnVisible("Effective Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Buyer Effective Date *@
             <PropertyColumn Property="x => x.BuyerEffectiveDate" Title="Buyer Eff. Date" 
-                            Hidden="@(!IsColumnVisible("BuyerEffectiveDate"))"
+                            Hidden="@(!IsColumnVisible("Buyer Effective Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Due Date *@
             <PropertyColumn Property="x => x.DueDate" Title="Due Date" 
-                            Hidden="@(!IsColumnVisible("DueDate"))"
+                            Hidden="@(!IsColumnVisible("Due Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Paid Date *@
             <PropertyColumn Property="x => x.PaidDate" Title="Paid Date" 
-                            Hidden="@(!IsColumnVisible("PaidDate"))"
+                            Hidden="@(!IsColumnVisible("Paid Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Total Bonus *@
             <PropertyColumn Property="x => x.TotalBonus" Title="Total Bonus" 
-                            Hidden="@(!IsColumnVisible("TotalBonus"))"
+                            Hidden="@(!IsColumnVisible("Total Bonus"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 130px;"
@@ -250,7 +256,7 @@
             
             @* Consideration Fee *@
             <PropertyColumn Property="x => x.ConsiderationFee" Title="Consideration Fee" 
-                            Hidden="@(!IsColumnVisible("ConsiderationFee"))"
+                            Hidden="@(!IsColumnVisible("Consideration Fee"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 130px;"
@@ -258,7 +264,7 @@
             
             @* Total Bonus and Fee *@
             <PropertyColumn Property="x => x.TotalBonusAndFee" Title="Total Bonus + Fee" 
-                            Hidden="@(!IsColumnVisible("TotalBonusAndFee"))"
+                            Hidden="@(!IsColumnVisible("Total Bonus and Fee"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 130px;"
@@ -266,7 +272,7 @@
             
             @* Draft Fee *@
             <PropertyColumn Property="x => x.DraftFee" Title="Draft Fee" 
-                            Hidden="@(!IsColumnVisible("DraftFee"))"
+                            Hidden="@(!IsColumnVisible("Draft Fee"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 120px;"
@@ -274,13 +280,13 @@
             
             @* Draft/Check Number *@
             <PropertyColumn Property="x => x.DraftCheckNumber" Title="Draft/Check #" 
-                            Hidden="@(!IsColumnVisible("DraftCheckNumber"))"
+                            Hidden="@(!IsColumnVisible("Draft/Check Number"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 130px;" />
             
             @* Total Gross Acres *@
             <PropertyColumn Property="x => x.TotalGrossAcres" Title="Gross Acres" 
-                            Hidden="@(!IsColumnVisible("TotalGrossAcres"))"
+                            Hidden="@(!IsColumnVisible("Gross Acres"))"
                             Sortable="true" Filterable="true"
                             Format="N4"
                             HeaderStyle="width: 110px;"
@@ -288,7 +294,7 @@
             
             @* Total Net Acres *@
             <PropertyColumn Property="x => x.TotalNetAcres" Title="Net Acres" 
-                            Hidden="@(!IsColumnVisible("TotalNetAcres"))"
+                            Hidden="@(!IsColumnVisible("Net Acres"))"
                             Sortable="true" Filterable="true"
                             Format="N4"
                             HeaderStyle="width: 110px;"
@@ -296,25 +302,25 @@
             
             @* Field Check *@
             <PropertyColumn Property="x => x.FieldCheck" Title="Field Check" 
-                            Hidden="@(!IsColumnVisible("FieldCheck"))"
+                            Hidden="@(!IsColumnVisible("Field Check"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 100px;" />
             
             @* Closing Status *@
             <PropertyColumn Property="x => x.ClosingStatus" Title="Closing Status" 
-                            Hidden="@(!IsColumnVisible("ClosingStatus"))"
+                            Hidden="@(!IsColumnVisible("Closing Status"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 130px;" />
             
             @* SSR In Pay *@
             <PropertyColumn Property="x => x.SsrInPay" Title="SSR In Pay" 
-                            Hidden="@(!IsColumnVisible("SsrInPay"))"
+                            Hidden="@(!IsColumnVisible("SSR In Pay"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 90px;" />
             
             @* Title Opinion *@
             <PropertyColumn Property="x => x.TitleOpinion" Title="Title Opinion" 
-                            Hidden="@(!IsColumnVisible("TitleOpinion"))"
+                            Hidden="@(!IsColumnVisible("Title Opinion"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 130px;" />
             
@@ -333,7 +339,7 @@
             
             @* Lien Amount *@
             <PropertyColumn Property="x => x.LienAmount" Title="Lien Amount" 
-                            Hidden="@(!IsColumnVisible("LienAmount"))"
+                            Hidden="@(!IsColumnVisible("Lien Amount"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 120px;"
@@ -341,7 +347,7 @@
             
             @* Tax Amount Due *@
             <PropertyColumn Property="x => x.TaxAmountDue" Title="Tax Due" 
-                            Hidden="@(!IsColumnVisible("TaxAmountDue"))"
+                            Hidden="@(!IsColumnVisible("Tax Due"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 110px;"
@@ -349,7 +355,7 @@
             
             @* Tax Amount Paid *@
             <PropertyColumn Property="x => x.TaxAmountPaid" Title="Tax Paid" 
-                            Hidden="@(!IsColumnVisible("TaxAmountPaid"))"
+                            Hidden="@(!IsColumnVisible("Tax Paid"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 110px;"
@@ -357,34 +363,34 @@
             
             @* Invoice Number *@
             <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice #" 
-                            Hidden="@(!IsColumnVisible("InvoiceNumber"))"
+                            Hidden="@(!IsColumnVisible("Invoice Number"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 100px;" />
             
             @* Invoice Date *@
             <PropertyColumn Property="x => x.InvoiceDate" Title="Invoice Date" 
-                            Hidden="@(!IsColumnVisible("InvoiceDate"))"
+                            Hidden="@(!IsColumnVisible("Invoice Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Invoice Due Date *@
             <PropertyColumn Property="x => x.InvoiceDueDate" Title="Invoice Due" 
-                            Hidden="@(!IsColumnVisible("InvoiceDueDate"))"
+                            Hidden="@(!IsColumnVisible("Invoice Due Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Invoice Paid Date *@
             <PropertyColumn Property="x => x.InvoicePaidDate" Title="Invoice Paid" 
-                            Hidden="@(!IsColumnVisible("InvoicePaidDate"))"
+                            Hidden="@(!IsColumnVisible("Invoice Paid Date"))"
                             Sortable="true" Filterable="true"
                             Format="MM/dd/yyyy"
                             HeaderStyle="width: 120px;" />
             
             @* Invoice Total *@
             <PropertyColumn Property="x => x.InvoiceTotal" Title="Invoice Total" 
-                            Hidden="@(!IsColumnVisible("InvoiceTotal"))"
+                            Hidden="@(!IsColumnVisible("Invoice Total"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 120px;"
@@ -400,7 +406,7 @@
             
             @* Commission Percent *@
             <PropertyColumn Property="x => x.CommissionPercent" Title="Comm %" 
-                            Hidden="@(!IsColumnVisible("CommissionPercent"))"
+                            Hidden="@(!IsColumnVisible("Comm %"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 80px;"
@@ -408,23 +414,97 @@
             
             @* Have Check Stub *@
             <PropertyColumn Property="x => x.HaveCheckStub" Title="Check Stub" 
-                            Hidden="@(!IsColumnVisible("HaveCheckStub"))"
+                            Hidden="@(!IsColumnVisible("Check Stub"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 100px;" />
             
             @* Check Stub Desc *@
             <PropertyColumn Property="x => x.CheckStubDesc" Title="Stub Desc" 
-                            Hidden="@(!IsColumnVisible("CheckStubDesc"))"
+                            Hidden="@(!IsColumnVisible("Stub Desc"))"
                             Sortable="true" Filterable="true"
                             HeaderStyle="width: 150px;" />
             
             @* Referral Fee *@
             <PropertyColumn Property="x => x.ReferralFee" Title="Referral Fee" 
-                            Hidden="@(!IsColumnVisible("ReferralFee"))"
+                            Hidden="@(!IsColumnVisible("Referral Fee"))"
                             Sortable="true" Filterable="true"
                             Format="N2"
                             HeaderStyle="width: 110px;"
                             CellStyle="text-align: right;" />
+            
+            @* Seller Columns *@
+            <TemplateColumn Title="Seller Name" SortLabel="Seller Name" Hidden="@(!IsColumnVisible("Seller Name"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.SellerName
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Last Name" SortLabel="Seller Last Name" Hidden="@(!IsColumnVisible("Seller Last Name"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.SellerLastName
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Address 1" SortLabel="Seller Address" Hidden="@(!IsColumnVisible("Seller Address"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine1
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Address 2" Hidden="@(!IsColumnVisible("Seller Address 2"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine2
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller City" SortLabel="Seller City" Hidden="@(!IsColumnVisible("Seller City"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.City
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller State" SortLabel="Seller State" Hidden="@(!IsColumnVisible("Seller State"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.StateCode
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Zip" SortLabel="Seller Zip Code" Hidden="@(!IsColumnVisible("Seller Zip Code"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ZipCode
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Phone" SortLabel="Seller Phone" Hidden="@(!IsColumnVisible("Seller Phone"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactPhone
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Fax" SortLabel="Seller Fax" Hidden="@(!IsColumnVisible("Seller Fax"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactFax
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Seller Email" SortLabel="Seller Email" Hidden="@(!IsColumnVisible("Seller Email"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactEmail
+                </CellTemplate>
+            </TemplateColumn>
+            
+            @* Other Related Columns *@
+            <TemplateColumn Title="Operator" SortLabel="Operator Name" Hidden="@(!IsColumnVisible("Operator Name"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @string.Join(", ", context.Item.AcquisitionOperators.Select(x => x.Operator?.OperatorName).Where(x => !string.IsNullOrEmpty(x)))
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="County" SortLabel="County Name" Hidden="@(!IsColumnVisible("County Name"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @string.Join(", ", context.Item.AcquisitionCounties.Select(x => x.County?.CountyName).Where(x => !string.IsNullOrEmpty(x)))
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Unit Name" SortLabel="Unit Name" Hidden="@(!IsColumnVisible("Unit Name"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitName).Where(x => !string.IsNullOrEmpty(x)))
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Unit Interest" SortLabel="Unit Interest" Hidden="@(!IsColumnVisible("Unit Interest"))" HeaderStyle="white-space:nowrap">
+                <CellTemplate>
+                    @string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitInterest).Where(x => x.HasValue))
+                </CellTemplate>
+            </TemplateColumn>
             
         </Columns>
         

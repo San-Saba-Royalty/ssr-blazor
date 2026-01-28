@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using SSRBusiness.BusinessClasses;
 using SSRBusiness.Data;
 using SSRBusiness.Entities;
+using SSRBlazor.Models;
 
 namespace SSRBlazor.Services;
 
@@ -359,29 +360,64 @@ public class DocumentService
     /// <param name="searchAcquisitions">True to search acquisition documents, false for check statements</param>
     /// <param name="includeAcquisitionDetails">True to include acquisition details in results</param>
     /// <returns>List of matching documents</returns>
-    public Task<List<Models.DocumentSearchResult>> SearchDocumentsAsync(
+    /// <summary>
+    /// Search documents using full-text search
+    /// </summary>
+    /// <param name="searchText">Search text (minimum 2 characters)</param>
+    /// <param name="searchAcquisitions">True to search acquisition documents, false for check statements</param>
+    /// <param name="includeAcquisitionDetails">True to include acquisition details in results</param>
+    /// <returns>List of matching documents</returns>
+    public async Task<List<DocumentSearchResult>> SearchDocumentsAsync(
         string searchText,
         bool searchAcquisitions = true,
         bool includeAcquisitionDetails = false)
     {
-        // TODO: Implement actual DocuShare search integration
-        // This is a stub that will need to be connected to the document storage system
-        // 
-        // The legacy implementation used SSRDocuShare.DocumentSearch class which:
-        // 1. Connected to DocuShare server using credentials
-        // 2. Searched within specified collection roots (Acquisition or Check Statement)
-        // 3. Returned DocumentSearchItem objects with file info and optional acquisition ID
-        // 4. Optionally loaded full acquisition details for each result
-        //
-        // Future implementation options:
-        // - Azure Blob Storage with Azure Cognitive Search
-        // - AWS S3 with OpenSearch
-        // - Local file system with Lucene.NET
-        // - Direct DocuShare API integration (if still in use)
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
+        {
+            return new List<DocumentSearchResult>();
+        }
 
-        throw new NotImplementedException(
-            "Document search is not yet implemented. " +
-            "This feature requires integration with the document storage system.");
+        if (!searchAcquisitions)
+        {
+            // Check Statements search is not supported in this version as there is no corresponding SQL table
+            _logger.LogWarning("Check Statement search requested but not supported");
+            return new List<DocumentSearchResult>();
+        }
+
+        try
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var repository = new AcquisitionDocumentRepository(context);
+
+            // Execute search via repository
+            var results = await repository.SearchDocumentsAsync(searchText, includeAcquisitionDetails);
+
+            // Map to Blazor models
+            return results.Select(r => new DocumentSearchResult
+            {
+                FileId = r.AcquisitionDocumentID.ToString(), // Using ID as FileId for now
+                DisplayName = Path.GetFileName(r.DocumentLocation) ?? "Unknown Document",
+                FileName = Path.GetFileName(r.DocumentLocation) ?? "Unknown Document",
+                DocumentType = "Acquisition Document", // Generic type since we don't have explicit types on AcqDoc table yet
+                CreatedBy = r.CreatedByName,
+                CreationDate = r.CreatedOn,
+                AcquisitionId = r.AcquisitionID,
+                AcquisitionDetails = includeAcquisitionDetails ? new AcquisitionDetailsInfo
+                {
+                    AcquisitionId = r.AcquisitionID,
+                    SellerName = r.SellerName,
+                    EffectiveDate = r.EffectiveDate,
+                    Counties = r.Counties,
+                    Operators = r.Operators,
+                    Buyers = r.Buyers
+                } : null
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching documents with text: {SearchText}", searchText);
+            throw;
+        }
     }
 
     #region Private Helper Methods

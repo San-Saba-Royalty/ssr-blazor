@@ -599,6 +599,34 @@ public class AcquisitionService
                 ? (sort.Descending ? acquisitions.OrderByDescending(a => a.InvoiceTotal) : acquisitions.OrderBy(a => a.InvoiceTotal))
                 : (sort.Descending ? acquisitions.ThenByDescending(a => a.InvoiceTotal) : acquisitions.ThenBy(a => a.InvoiceTotal)),
 
+            "SellerName" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerName : "") : acquisitions.OrderBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerName : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerName : "") : acquisitions.ThenBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerName : "")),
+
+            "SellerLastName" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerLastName : "") : acquisitions.OrderBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerLastName : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerLastName : "") : acquisitions.ThenBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().SellerLastName : "")),
+
+            "SellerState" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().StateCode : "") : acquisitions.OrderBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().StateCode : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().StateCode : "") : acquisitions.ThenBy(a => a.AcquisitionSellers.FirstOrDefault() != null ? a.AcquisitionSellers.FirstOrDefault().StateCode : "")),
+
+            "Operator" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionOperators.FirstOrDefault() != null ? a.AcquisitionOperators.FirstOrDefault().Operator.OperatorName : "") : acquisitions.OrderBy(a => a.AcquisitionOperators.FirstOrDefault() != null ? a.AcquisitionOperators.FirstOrDefault().Operator.OperatorName : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionOperators.FirstOrDefault() != null ? a.AcquisitionOperators.FirstOrDefault().Operator.OperatorName : "") : acquisitions.ThenBy(a => a.AcquisitionOperators.FirstOrDefault() != null ? a.AcquisitionOperators.FirstOrDefault().Operator.OperatorName : "")),
+
+            "County" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionCounties.FirstOrDefault() != null ? a.AcquisitionCounties.FirstOrDefault().County.CountyName : "") : acquisitions.OrderBy(a => a.AcquisitionCounties.FirstOrDefault() != null ? a.AcquisitionCounties.FirstOrDefault().County.CountyName : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionCounties.FirstOrDefault() != null ? a.AcquisitionCounties.FirstOrDefault().County.CountyName : "") : acquisitions.ThenBy(a => a.AcquisitionCounties.FirstOrDefault() != null ? a.AcquisitionCounties.FirstOrDefault().County.CountyName : "")),
+
+            "UnitName" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitName : "") : acquisitions.OrderBy(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitName : ""))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitName : "") : acquisitions.ThenBy(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitName : "")),
+
+            "UnitInterest" => isFirst
+                ? (sort.Descending ? acquisitions.OrderByDescending(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitInterest : 0) : acquisitions.OrderBy(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitInterest : 0))
+                : (sort.Descending ? acquisitions.ThenByDescending(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitInterest : 0) : acquisitions.ThenBy(a => a.AcquisitionUnits.FirstOrDefault() != null ? a.AcquisitionUnits.FirstOrDefault().UnitInterest : 0)),
+
             _ => acquisitions
         };
     }

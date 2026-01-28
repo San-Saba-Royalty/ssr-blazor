@@ -63,31 +63,29 @@ public partial class AcquisitionIndex : ComponentBase
             }
         }
 
-        // If no default view, fallback to legacy default or just load data
-        if (_visibleColumns.Count == 0)
+        // If no default view, try to find a "Default" view in the list
+        var defaultView = _availableViews.FirstOrDefault(v => v.ViewName == "Default");
+        if (defaultView != null)
         {
-            InitializeDefaultLegacyView();
+            _selectedViewId = defaultView.ViewID;
+            _activeView = "Default";
+            _isInitialized = true;
+            await LoadDataWithViewAsync(defaultView.ViewID);
+            return;
         }
 
-        _isInitialized = true;
-        await LoadDataAsync();
-    }
+        // Fallback: If absolutely no view found, show nothing (strict) or prompt user
+        // We will default to empty visible columns if no view is active, forcing user to select/create one
+        // OR we can default to showing ALL columns if that's safer. 
+        // Given "PRECISELY", legacy likely loaded a default view. 
+        // We'll trust the user to have a "Default" view created via migration or UI.
 
-    private void InitializeDefaultLegacyView()
-    {
-        _visibleColumns = new HashSet<string>
-        {
-            "AcquisitionID",
-            "AcquisitionNumber",
-            "Buyer",
-            "Assignee",
-            "EffectiveDate",
-            "DueDate",
-            "PaidDate",
-            "TotalBonus",
-            "ClosingStatus",
-            "SsrInPay"
-        };
+        _isInitialized = true;
+        // Load data but with NO columns visible initially if no view selected? 
+        // Or default to All? Let's default to All for safety if system is fresh.
+        _activeView = "All Fields";
+        _visibleColumns.Clear(); // Empty means Show All in IsColumnVisible
+        await LoadDataAsync();
     }
 
     private async Task LoadViewsAsync()
@@ -108,8 +106,11 @@ public partial class AcquisitionIndex : ComponentBase
         else
         {
             _activeView = "Default";
-            // Check if user has "Default" view logic, otherwise fallback
-            InitializeDefaultLegacyView();
+            // If they explicitly select "Default View" (null) but we removed hardcoded defaults
+            // We should reload the user's persisted default or clear?
+            // Legacy behavior: "Default" usually implied a specific set. 
+            // We'll map null to clearing view (Show All) or reloading User Default.
+            _activeView = "All Fields";
         }
 
         // Persist this choice
@@ -131,9 +132,8 @@ public partial class AcquisitionIndex : ComponentBase
     {
         if (!viewId.HasValue)
         {
-            // Reset to default columns if needed
-            _activeFilter = "All Records";
-            InitializeDefaultLegacyView();
+            // "All Fields" or Default mode
+            _visibleColumns.Clear(); // Implies All Visible
             if (_dataGrid != null) await _dataGrid.ReloadServerData();
             return;
         }
@@ -144,23 +144,26 @@ public partial class AcquisitionIndex : ComponentBase
             // Apply view's selected fields to grid
             var selectedFields = viewConfig.Fields.Where(f => f.IsSelected).Select(f => f.FieldName).ToList();
 
+            // DEBUG: Log loaded fields to help diagnose visibility issues
+            Console.WriteLine($"[AcquisitionIndex] Loaded View '{viewConfig.ViewName}' with {selectedFields.Count} columns.");
+            foreach (var f in selectedFields) Console.WriteLine($" - {f}");
+
             if (selectedFields.Any())
             {
                 _visibleColumns = new HashSet<string>(selectedFields);
             }
             else
             {
-                // FALLBACK: View exists but has no selected columns
-                // Use default columns to prevent empty grid
-                Snackbar.Add($"View '{_activeView}' has no columns configured. Using defaults. Please configure columns using the Column Ordering button.", Severity.Warning);
-                InitializeDefaultLegacyView();
+                // View exists but has no columns: Show warning but respect empty set (grid will be empty)
+                Snackbar.Add($"View '{_activeView}' has no columns configured.", Severity.Warning);
+                _visibleColumns = new HashSet<string>(); // Show nothing
             }
         }
         else
         {
-            // View not found, use defaults
-            Snackbar.Add($"View configuration not found. Using default columns.", Severity.Warning);
-            InitializeDefaultLegacyView();
+            // View not found
+            Snackbar.Add($"View configuration not found.", Severity.Warning);
+            _visibleColumns.Clear(); // Fallback to All? Or None? All is safer.
         }
 
         if (_dataGrid != null) await _dataGrid.ReloadServerData();
@@ -381,21 +384,6 @@ public partial class AcquisitionIndex : ComponentBase
     /// <summary>
     /// Navigate to edit form for selected acquisition
     /// </summary>
-    private void EditSelectedAcquisition()
-    {
-        if (_selectedItem != null)
-        {
-            Navigation.NavigateTo($"/acquisition/edit/{_selectedItem.AcquisitionID}");
-        }
-        else
-        {
-            Snackbar.Add("Please select an acquisition to edit", Severity.Warning);
-        }
-    }
-
-    /// <summary>
-    /// Copy selected acquisition using service
-    /// </summary>
     /// <summary>
     /// Navigate to copy form for selected acquisition
     /// </summary>
@@ -408,6 +396,48 @@ public partial class AcquisitionIndex : ComponentBase
         else
         {
             Snackbar.Add("Please select an acquisition to copy", Severity.Warning);
+        }
+    }
+
+    private async Task GotoLastAcquisition()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var lastId = SessionStateService.GetLastAcquisitionId(userId);
+            if (lastId.HasValue)
+            {
+                Navigation.NavigateTo($"/acquisition/edit/{lastId.Value}");
+            }
+            else
+            {
+                Snackbar.Add("No previous acquisition found in history.", Severity.Info);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Navigate to edit form for selected acquisition
+    /// </summary>
+    private async Task EditSelectedAcquisition()
+    {
+        if (_selectedItem != null)
+        {
+            // Track last acquisition
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                SessionStateService.SetLastAcquisitionId(userId, _selectedItem.AcquisitionID);
+            }
+
+            Navigation.NavigateTo($"/acquisition/edit/{_selectedItem.AcquisitionID}");
+        }
+        else
+        {
+            Snackbar.Add("Please select an acquisition to edit", Severity.Warning);
         }
     }
 
