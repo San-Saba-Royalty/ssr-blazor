@@ -6,6 +6,8 @@ using SSRBlazor.Services;
 using SSRBusiness.BusinessFramework;
 using SSRBusiness.Entities;
 using SSRBusiness.Interfaces;
+using Microsoft.AspNetCore.DataProtection;
+using Azure.Storage.Blobs;
 using ReportService = SSRBusiness.BusinessClasses.ReportService;
 
 namespace SSRBlazor;
@@ -144,6 +146,16 @@ public static class DependencyInjection
 
         // Register cache warming hosted service (runs on startup)
         services.AddHostedService<CacheWarmingService>();
+
+        // Configure Data Protection to persist keys to Azure Blob Storage
+        var accountName = configuration["AzureFileShare:AccountName"];
+        var accountKey = configuration["AzureFileShare:AccountKey"];
+        if (!string.IsNullOrEmpty(accountName) && !string.IsNullOrEmpty(accountKey))
+        {
+            var blobConnectionString = $"DefaultEndpointsProtocol=https;AccountName={accountName};AccountKey={accountKey};EndpointSuffix=core.windows.net";
+            services.AddDataProtection()
+                .PersistKeysToAzureBlobStorage(blobConnectionString, "dataprotection", "keys.xml");
+        }
 
         return services;
     }

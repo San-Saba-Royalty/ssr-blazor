@@ -73,17 +73,19 @@
     {
         if (User != null)
         {
-            try 
+            try
             {
-                UserRepository.Update(User);
-                 
                 if (!string.IsNullOrWhiteSpace(_newPassword))
                 {
+                    // Update both user info and password in a single operation
+                    UserRepository.Update(User);
                     await UserRepository.UpdatePasswordAsync(User.UserId, _newPassword);
                 }
-                else 
+                else
                 {
-                     await UserRepository.SaveChangesAsync();
+                    // Update only user information
+                    UserRepository.Update(User);
+                    await UserRepository.SaveChangesAsync();
                 }
 
                 Snackbar.Add("User information updated successfully!", Severity.Success);
