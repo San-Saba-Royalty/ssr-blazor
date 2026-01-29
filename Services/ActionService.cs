@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
+using MudBlazor;
 using SSRBlazor.Models;
+using SSRBlazor.Services;
 using SSRBusiness.BusinessClasses;
 using SSRBusiness.Data;
 
@@ -11,6 +13,11 @@ namespace SSRBlazor.Services;
 /// </summary>
 public class ActionService : IActionService
 {
+    private readonly NavigationManager _navigationManager;
+    private readonly AcquisitionService _acquisitionService;
+    private readonly LetterAgreementService _letterAgreementService;
+    private readonly FilterService _filterService;
+    private readonly ViewService _viewService;
     private readonly IDialogService _dialogService;
     private readonly IDbContextFactory<SsrDbContext> _contextFactory;
 

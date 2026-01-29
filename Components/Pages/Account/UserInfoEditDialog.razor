@@ -33,7 +33,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] IDialogReference MudDialog { get; set; } = default!;
 
     private User? _user;
     private bool _loading = true;
@@ -72,6 +72,6 @@
 
     private void HandleCancel()
     {
-        MudDialog.Cancel();
+        MudDialog.Close(DialogResult.Cancel());
     }
 }

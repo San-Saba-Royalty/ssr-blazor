@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using SSRBlazor.Services;
 
 namespace SSRBlazor.Components.Navigation;
 
@@ -6,6 +7,9 @@ public partial class MainMenu : ComponentBase
 {
     [Inject]
     private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private IActionService ActionService { get; set; } = default!;
 
     /// <summary>
     /// Whether to show the toolbar buttons
