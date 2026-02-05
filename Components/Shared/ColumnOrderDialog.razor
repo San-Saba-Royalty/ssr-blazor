@@ -1,0 +1,180 @@
+@using SSRBlazor.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <!-- Available Columns -->
+            <MudItem xs="5">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Available Columns</MudText>
+                <MudPaper Height="400px" Class="overflow-y-auto" Outlined="true">
+                    <MudList T="ViewFieldSelection" @bind-SelectedValue="_selectedAvailable" Clickable="true" Dense="true">
+                        @foreach (var field in _availableFields)
+                        {
+                            <MudListItem Value="@field" Text="@field.DisplayName" />
+                        }
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Action Buttons -->
+            <MudItem xs="2" Class="d-flex flex-column justify-center align-center gap-2">
+                <MudTooltip Text="Add">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" 
+                                 Variant="Variant.Filled" 
+                                 Color="Color.Primary" 
+                                 OnClick="AddColumn" 
+                                 Disabled="@(_selectedAvailable == null)" />
+                </MudTooltip>
+                <MudTooltip Text="Remove">
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" 
+                                 Variant="Variant.Filled" 
+                                 Color="Color.Secondary" 
+                                 OnClick="RemoveColumn" 
+                                 Disabled="@(_selectedVisible == null)" />
+                </MudTooltip>
+                
+                <MudDivider Class="my-4 w-100" />
+                
+                <MudTooltip Text="Move Up">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
+                                 Variant="Variant.Outlined" 
+                                 OnClick="MoveUp" 
+                                 Disabled="@(_selectedVisible == null || _visibleFields.IndexOf(_selectedVisible) == 0)" />
+                </MudTooltip>
+                <MudTooltip Text="Move Down">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
+                                 Variant="Variant.Outlined" 
+                                 OnClick="MoveDown" 
+                                 Disabled="@(_selectedVisible == null || _visibleFields.IndexOf(_selectedVisible) == _visibleFields.Count - 1)" />
+                </MudTooltip>
+            </MudItem>
+
+            <!-- Visible Columns -->
+            <MudItem xs="5">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Visible Columns (Ordered)</MudText>
+                <MudPaper Height="400px" Class="overflow-y-auto" Outlined="true">
+                    <MudList T="ViewFieldSelection" @bind-SelectedValue="_selectedVisible" Clickable="true" Dense="true">
+                        @foreach (var field in _visibleFields)
+                        {
+                            <MudListItem Value="@field">
+                                <div class="d-flex justify-space-between align-center w-100">
+                                    <MudText>@field.DisplayName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Default">@(_visibleFields.IndexOf(field) + 1)</MudText>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        
+        @if (_visibleFields.Count > 25)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                You have selected @_visibleFields.Count columns. Recommended maximum is 25 for best performance.
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save View</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public List<ViewFieldSelection> AllFields { get; set; } = new();
+
+    private List<ViewFieldSelection> _availableFields = new();
+    private List<ViewFieldSelection> _visibleFields = new();
+    
+    private ViewFieldSelection? _selectedAvailable;
+    private ViewFieldSelection? _selectedVisible;
+
+    protected override void OnInitialized()
+    {
+        // Split all fields into Available vs Visible based on IsSelected
+        // Visible fields should already be sorted by DisplayOrder from the Service
+        _visibleFields = AllFields.Where(f => f.IsSelected).OrderBy(f => f.DisplayOrder).ToList();
+        _availableFields = AllFields.Where(f => !f.IsSelected).OrderBy(f => f.DisplayName).ToList();
+    }
+
+    private void AddColumn()
+    {
+        if (_selectedAvailable == null) return;
+
+        var field = _selectedAvailable;
+        _availableFields.Remove(field);
+        
+        field.IsSelected = true;
+        _visibleFields.Add(field);
+        
+        // Auto-select the newly added item in right list? Maybe better to keep selection in left
+        _selectedAvailable = null;
+        _selectedVisible = field;
+    }
+
+    private void RemoveColumn()
+    {
+        if (_selectedVisible == null) return;
+        
+        // Don't allow removing mandatory columns "Acq ID" maybe?
+        // Logic: if FieldName == "AcquisitionID" prevent removal?
+        // For now, allow everything, but "Acq ID" is hardcoded in Grid as always visible usually.
+        
+        var field = _selectedVisible;
+        _visibleFields.Remove(field);
+        
+        field.IsSelected = false;
+        _availableFields.Add(field);
+        _availableFields = _availableFields.OrderBy(f => f.DisplayName).ToList(); // Keep alphabetical
+        
+        _selectedAvailable = field;
+        _selectedVisible = null;
+    }
+
+    private void MoveUp()
+    {
+        if (_selectedVisible == null) return;
+        
+        var index = _visibleFields.IndexOf(_selectedVisible);
+        if (index > 0)
+        {
+            var item = _visibleFields[index];
+            _visibleFields.RemoveAt(index);
+            _visibleFields.Insert(index - 1, item);
+        }
+    }
+
+    private void MoveDown()
+    {
+        if (_selectedVisible == null) return;
+        
+        var index = _visibleFields.IndexOf(_selectedVisible);
+        if (index < _visibleFields.Count - 1)
+        {
+            var item = _visibleFields[index];
+            _visibleFields.RemoveAt(index);
+            _visibleFields.Insert(index + 1, item);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        // Update the display order of the result list
+        for (int i = 0; i < _visibleFields.Count; i++)
+        {
+            _visibleFields[i].DisplayOrder = i + 1;
+        }
+
+        // Return the ordered list of ALL fields (merged back)
+        var result = new List<ViewFieldSelection>();
+        result.AddRange(_visibleFields);
+        result.AddRange(_availableFields); // Unselected ones at the end
+        
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+}

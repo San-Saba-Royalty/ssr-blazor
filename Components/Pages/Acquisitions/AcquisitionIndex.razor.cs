@@ -28,7 +28,9 @@ public partial class AcquisitionIndex : ComponentBase
     private List<View> _availableViews = new();
     private List<NamedFilter> _availableFilters = new();
 
-    // Current view's visible columns
+    // Current view's visible columns (Ordered)
+    private List<string> _orderedVisibleColumns = new();
+    // Keep HashSet for fast lookup if needed, but List is primary for render loop
     private HashSet<string> _visibleColumns = new();
 
     // Flag to prevent concurrent loading during initialization
@@ -150,20 +152,29 @@ public partial class AcquisitionIndex : ComponentBase
 
             if (selectedFields.Any())
             {
-                _visibleColumns = new HashSet<string>(selectedFields);
+                // Fields are already ordered by DisplayOrder from the Service
+                _orderedVisibleColumns = viewConfig.Fields
+                    .Where(f => f.IsSelected)
+                    .OrderBy(f => f.DisplayOrder)
+                    .Select(f => f.FieldName)
+                    .ToList();
+
+                _visibleColumns = new HashSet<string>(_orderedVisibleColumns);
             }
             else
             {
-                // View exists but has no columns: Show warning but respect empty set (grid will be empty)
+                // View exists but has no columns
                 Snackbar.Add($"View '{_activeView}' has no columns configured.", Severity.Warning);
-                _visibleColumns = new HashSet<string>(); // Show nothing
+                _orderedVisibleColumns.Clear();
+                _visibleColumns.Clear();
             }
         }
         else
         {
             // View not found
             Snackbar.Add($"View configuration not found.", Severity.Warning);
-            _visibleColumns.Clear(); // Fallback to All? Or None? All is safer.
+            _orderedVisibleColumns.Clear();
+            _visibleColumns.Clear();
         }
 
         if (_dataGrid != null) await _dataGrid.ReloadServerData();
@@ -173,34 +184,56 @@ public partial class AcquisitionIndex : ComponentBase
     {
         if (!_selectedViewId.HasValue)
         {
+            // Allow column ordering for "All Fields" view too, effectively creating a "Default" view preference if we want
+            // But per logic, User View Preferences are attached to a ViewName
+            // If they are on "All Fields", maybe we should prompt them to Create a View?
+            // For now, restrict to View.
             Snackbar.Add("Please select a specific view to customize columns.", Severity.Warning);
             return;
         }
 
-        var viewConfig = await ViewService.GetViewConfigurationAsync(_selectedViewId.Value);
+        // We already have Loaded the View Configuration in LoadDataWithViewAsync, but fetching fresh is safer
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        int? userIdInt = null;
+        if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int uId)) userIdInt = uId;
+
+        var viewConfig = await ViewService.GetViewConfigurationAsync(_selectedViewId.Value, userIdInt);
         if (viewConfig == null) return;
 
         var parameters = new DialogParameters();
-        parameters.Add("Fields", viewConfig.Fields);
+        parameters.Add("AllFields", viewConfig.Fields);
 
-        // Note: Assuming ColumnOrderingDialog exists in SSRBlazor.Components.Dialogs
-        // If not, this will need to be adjusted to the correct namespace or component name
-        var dialog = DialogService.Show<SSRBlazor.Components.Dialogs.ColumnOrderingDialog>("Column Ordering", parameters);
+        var dialog = DialogService.Show<SSRBlazor.Components.Shared.ColumnOrderDialog>("Column Ordering", parameters, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is List<ViewFieldSelection> orderedFields)
+        if (!result.Canceled && result.Data is List<ViewFieldSelection> allOrderedFields)
         {
-            viewConfig.Fields = orderedFields;
-            // Save the updated view configuration
-            var updateResult = await ViewService.UpdateAsync(viewConfig);
-            if (updateResult.Success)
+            // Extract the ORDERED list of Visible fields
+            var newOrder = allOrderedFields
+                .Where(f => f.IsSelected)
+                .OrderBy(f => f.DisplayOrder)
+                .Select(f => f.FieldName)
+                .ToList();
+
+            if (userIdInt.HasValue)
             {
-                Snackbar.Add("View columns updated.", Severity.Success);
-                await LoadDataWithViewAsync(_selectedViewId.Value);
+                // Save as User Preference
+                var saveResult = await ViewService.SaveUserColumnPreferenceAsync(userIdInt.Value, viewConfig.ViewName, viewConfig.Module ?? "Acquisition", newOrder);
+
+                if (saveResult.Success)
+                {
+                    Snackbar.Add("User column view updated.", Severity.Success);
+                    await LoadDataWithViewAsync(_selectedViewId.Value);
+                }
+                else
+                {
+                    Snackbar.Add($"Error saving preference: {saveResult.Error}", Severity.Error);
+                }
             }
             else
             {
-                Snackbar.Add($"Error updating view: {updateResult.Error}", Severity.Error);
+                Snackbar.Add("User not authenticated, cannot save preference.", Severity.Error);
             }
         }
     }

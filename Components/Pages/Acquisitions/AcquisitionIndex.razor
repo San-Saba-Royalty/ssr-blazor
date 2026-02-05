@@ -185,335 +185,21 @@
         </ToolBarContent>
         
         <Columns>
-            @* Acq ID Column - Always visible *@
-            <PropertyColumn Property="x => x.AcquisitionID" Title="Acq ID" 
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 90px;">
-                <FooterTemplate>
-                    Count: @_totalCount
-                </FooterTemplate>
-            </PropertyColumn>
-            
-            @* Acquisition Number *@
-            <PropertyColumn Property="x => x.AcquisitionNumber" Title="Acq Number" 
-                            Hidden="@(!IsColumnVisible("Acquisition Number"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Buyer *@
-            <PropertyColumn Property="x => x.Buyer" Title="Buyer" 
-                            Hidden="@(!IsColumnVisible("Buyer Name"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 180px;" />
-            
-            @* Assignee *@
-            <PropertyColumn Property="x => x.Assignee" Title="Assignee" 
-                            Hidden="@(!IsColumnVisible("Assignee"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 150px;" />
-            
-            @* Folder Location *@
-            <PropertyColumn Property="x => x.FolderLocation" Title="Folder Location" 
-                            Hidden="@(!IsColumnVisible("Folder Location"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 180px;" />
-            
-            @* Effective Date *@
-            <PropertyColumn Property="x => x.EffectiveDate" Title="Effective Date" 
-                            Hidden="@(!IsColumnVisible("Effective Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Buyer Effective Date *@
-            <PropertyColumn Property="x => x.BuyerEffectiveDate" Title="Buyer Eff. Date" 
-                            Hidden="@(!IsColumnVisible("Buyer Effective Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Due Date *@
-            <PropertyColumn Property="x => x.DueDate" Title="Due Date" 
-                            Hidden="@(!IsColumnVisible("Due Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Paid Date *@
-            <PropertyColumn Property="x => x.PaidDate" Title="Paid Date" 
-                            Hidden="@(!IsColumnVisible("Paid Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Total Bonus *@
-            <PropertyColumn Property="x => x.TotalBonus" Title="Total Bonus" 
-                            Hidden="@(!IsColumnVisible("Total Bonus"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 130px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Consideration Fee *@
-            <PropertyColumn Property="x => x.ConsiderationFee" Title="Consideration Fee" 
-                            Hidden="@(!IsColumnVisible("Consideration Fee"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 130px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Total Bonus and Fee *@
-            <PropertyColumn Property="x => x.TotalBonusAndFee" Title="Total Bonus + Fee" 
-                            Hidden="@(!IsColumnVisible("Total Bonus and Fee"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 130px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Draft Fee *@
-            <PropertyColumn Property="x => x.DraftFee" Title="Draft Fee" 
-                            Hidden="@(!IsColumnVisible("Draft Fee"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 120px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Draft/Check Number *@
-            <PropertyColumn Property="x => x.DraftCheckNumber" Title="Draft/Check #" 
-                            Hidden="@(!IsColumnVisible("Draft/Check Number"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 130px;" />
-            
-            @* Total Gross Acres *@
-            <PropertyColumn Property="x => x.TotalGrossAcres" Title="Gross Acres" 
-                            Hidden="@(!IsColumnVisible("Gross Acres"))"
-                            Sortable="true" Filterable="true"
-                            Format="N4"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Total Net Acres *@
-            <PropertyColumn Property="x => x.TotalNetAcres" Title="Net Acres" 
-                            Hidden="@(!IsColumnVisible("Net Acres"))"
-                            Sortable="true" Filterable="true"
-                            Format="N4"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Field Check *@
-            <PropertyColumn Property="x => x.FieldCheck" Title="Field Check" 
-                            Hidden="@(!IsColumnVisible("Field Check"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 100px;" />
-            
-            @* Closing Status *@
-            <PropertyColumn Property="x => x.ClosingStatus" Title="Closing Status" 
-                            Hidden="@(!IsColumnVisible("Closing Status"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 130px;" />
-            
-            @* SSR In Pay *@
-            <PropertyColumn Property="x => x.SsrInPay" Title="SSR In Pay" 
-                            Hidden="@(!IsColumnVisible("SSR In Pay"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 90px;" />
-            
-            @* Title Opinion *@
-            <PropertyColumn Property="x => x.TitleOpinion" Title="Title Opinion" 
-                            Hidden="@(!IsColumnVisible("Title Opinion"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 130px;" />
-            
-            @* Liens (Boolean) *@
-            <TemplateColumn Title="Liens" 
-                            Hidden="@(!IsColumnVisible("Liens"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 80px;">
-                <CellTemplate>
-                    @if (context.Item.Liens)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Warning" Size="Size.Small" />
-                    }
-                </CellTemplate>
-            </TemplateColumn>
-            
-            @* Lien Amount *@
-            <PropertyColumn Property="x => x.LienAmount" Title="Lien Amount" 
-                            Hidden="@(!IsColumnVisible("Lien Amount"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 120px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Tax Amount Due *@
-            <PropertyColumn Property="x => x.TaxAmountDue" Title="Tax Due" 
-                            Hidden="@(!IsColumnVisible("Tax Due"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Tax Amount Paid *@
-            <PropertyColumn Property="x => x.TaxAmountPaid" Title="Tax Paid" 
-                            Hidden="@(!IsColumnVisible("Tax Paid"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Invoice Number *@
-            <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice #" 
-                            Hidden="@(!IsColumnVisible("Invoice Number"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 100px;" />
-            
-            @* Invoice Date *@
-            <PropertyColumn Property="x => x.InvoiceDate" Title="Invoice Date" 
-                            Hidden="@(!IsColumnVisible("Invoice Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Invoice Due Date *@
-            <PropertyColumn Property="x => x.InvoiceDueDate" Title="Invoice Due" 
-                            Hidden="@(!IsColumnVisible("Invoice Due Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Invoice Paid Date *@
-            <PropertyColumn Property="x => x.InvoicePaidDate" Title="Invoice Paid" 
-                            Hidden="@(!IsColumnVisible("Invoice Paid Date"))"
-                            Sortable="true" Filterable="true"
-                            Format="MM/dd/yyyy"
-                            HeaderStyle="width: 120px;" />
-            
-            @* Invoice Total *@
-            <PropertyColumn Property="x => x.InvoiceTotal" Title="Invoice Total" 
-                            Hidden="@(!IsColumnVisible("Invoice Total"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 120px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Commission *@
-            <PropertyColumn Property="x => x.Commission" Title="Commission" 
-                            Hidden="@(!IsColumnVisible("Commission"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Commission Percent *@
-            <PropertyColumn Property="x => x.CommissionPercent" Title="Comm %" 
-                            Hidden="@(!IsColumnVisible("Comm %"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 80px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Have Check Stub *@
-            <PropertyColumn Property="x => x.HaveCheckStub" Title="Check Stub" 
-                            Hidden="@(!IsColumnVisible("Check Stub"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 100px;" />
-            
-            @* Check Stub Desc *@
-            <PropertyColumn Property="x => x.CheckStubDesc" Title="Stub Desc" 
-                            Hidden="@(!IsColumnVisible("Stub Desc"))"
-                            Sortable="true" Filterable="true"
-                            HeaderStyle="width: 150px;" />
-            
-            @* Referral Fee *@
-            <PropertyColumn Property="x => x.ReferralFee" Title="Referral Fee" 
-                            Hidden="@(!IsColumnVisible("Referral Fee"))"
-                            Sortable="true" Filterable="true"
-                            Format="N2"
-                            HeaderStyle="width: 110px;"
-                            CellStyle="text-align: right;" />
-            
-            @* Seller Columns *@
-            <TemplateColumn Title="Seller Name" SortLabel="Seller Name" Hidden="@(!IsColumnVisible("Seller Name"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.SellerName
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Last Name" SortLabel="Seller Last Name" Hidden="@(!IsColumnVisible("Seller Last Name"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.SellerLastName
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Address 1" SortLabel="Seller Address" Hidden="@(!IsColumnVisible("Seller Address"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine1
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Address 2" Hidden="@(!IsColumnVisible("Seller Address 2"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine2
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller City" SortLabel="Seller City" Hidden="@(!IsColumnVisible("Seller City"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.City
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller State" SortLabel="Seller State" Hidden="@(!IsColumnVisible("Seller State"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.StateCode
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Zip" SortLabel="Seller Zip Code" Hidden="@(!IsColumnVisible("Seller Zip Code"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ZipCode
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Phone" SortLabel="Seller Phone" Hidden="@(!IsColumnVisible("Seller Phone"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactPhone
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Fax" SortLabel="Seller Fax" Hidden="@(!IsColumnVisible("Seller Fax"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactFax
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Seller Email" SortLabel="Seller Email" Hidden="@(!IsColumnVisible("Seller Email"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @context.Item.AcquisitionSellers.FirstOrDefault()?.ContactEmail
-                </CellTemplate>
-            </TemplateColumn>
-            
-            @* Other Related Columns *@
-            <TemplateColumn Title="Operator" SortLabel="Operator Name" Hidden="@(!IsColumnVisible("Operator Name"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @string.Join(", ", context.Item.AcquisitionOperators.Select(x => x.Operator?.OperatorName).Where(x => !string.IsNullOrEmpty(x)))
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="County" SortLabel="County Name" Hidden="@(!IsColumnVisible("County Name"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @string.Join(", ", context.Item.AcquisitionCounties.Select(x => x.County?.CountyName).Where(x => !string.IsNullOrEmpty(x)))
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Unit Name" SortLabel="Unit Name" Hidden="@(!IsColumnVisible("Unit Name"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitName).Where(x => !string.IsNullOrEmpty(x)))
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Unit Interest" SortLabel="Unit Interest" Hidden="@(!IsColumnVisible("Unit Interest"))" HeaderStyle="white-space:nowrap">
-                <CellTemplate>
-                    @string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitInterest).Where(x => x.HasValue))
-                </CellTemplate>
-            </TemplateColumn>
-            
+            @* Always render AcquisitionID first if we want it pinned, or include in loop if dynamic *@
+            @* We will check if "AcquisitionID" is in the ordered list. If not, we might want to force it or assume users can hide it. *@
+            @* Logic: Iterate over _orderedVisibleColumns *@
+
+            @foreach (var colName in _orderedVisibleColumns)
+            {
+                @GetColumnFragment(colName)
+            }
         </Columns>
-        
+
         <PagerContent>
             <MudDataGridPager T="Acquisition" 
                               PageSizeOptions="@(new int[] { 25, 50, 100, 250 })" />
         </PagerContent>
         
-
         <NoRecordsContent>
             <MudText Typo="Typo.body1">No acquisitions found matching the current filter.</MudText>
         </NoRecordsContent>
@@ -541,4 +227,148 @@
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@ConfirmGenerateBarcode">Generate</MudButton>
     </DialogActions>
 </MudDialog>
+
+@code {
+    private RenderFragment? GetColumnFragment(string columnName)
+    {
+        return columnName switch
+        {
+            // Note: T="Acquisition" is required because we are in a C# context now
+            "AcquisitionID" or "Acq ID" => @<PropertyColumn T="Acquisition" TProperty="int" Property="x => x.AcquisitionID" Title="Acq ID" Sortable="true" Filterable="true" HeaderStyle="width: 90px;">
+                <FooterTemplate>Count: @_totalCount</FooterTemplate>
+            </PropertyColumn>,
+            
+            "Acquisition Number" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.AcquisitionNumber" Title="Acq Number" Sortable="true" Filterable="true" HeaderStyle="width: 120px;" />,
+            
+            "Buyer Name" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.Buyer" Title="Buyer" Sortable="true" Filterable="true" HeaderStyle="width: 180px;" />,
+            
+            "Assignee" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.Assignee" Title="Assignee" Sortable="true" Filterable="true" HeaderStyle="width: 150px;" />,
+            
+            "Folder Location" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.FolderLocation" Title="Folder Location" Sortable="true" Filterable="true" HeaderStyle="width: 180px;" />,
+            
+            "Effective Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.EffectiveDate" Title="Effective Date" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Buyer Effective Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.BuyerEffectiveDate" Title="Buyer Eff. Date" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Due Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.DueDate" Title="Due Date" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Paid Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.PaidDate" Title="Paid Date" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Total Bonus" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TotalBonus" Title="Total Bonus" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 130px;" CellStyle="text-align: right;" />,
+            
+            "Consideration Fee" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.ConsiderationFee" Title="Consideration Fee" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 130px;" CellStyle="text-align: right;" />,
+            
+            "Total Bonus and Fee" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TotalBonusAndFee" Title="Total Bonus + Fee" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 130px;" CellStyle="text-align: right;" />,
+            
+            "Draft Fee" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.DraftFee" Title="Draft Fee" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 120px;" CellStyle="text-align: right;" />,
+            
+            "Draft/Check Number" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.DraftCheckNumber" Title="Draft/Check #" Sortable="true" Filterable="true" HeaderStyle="width: 130px;" />,
+            
+            "Gross Acres" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TotalGrossAcres" Title="Gross Acres" Sortable="true" Filterable="true" Format="N4" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Net Acres" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TotalNetAcres" Title="Net Acres" Sortable="true" Filterable="true" Format="N4" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Field Check" => @<PropertyColumn T="Acquisition" TProperty="bool" Property="x => x.FieldCheck" Title="Field Check" Sortable="true" Filterable="true" HeaderStyle="width: 100px;" />,
+            
+            "Closing Status" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.ClosingStatus" Title="Closing Status" Sortable="true" Filterable="true" HeaderStyle="width: 130px;" />,
+            
+            "SSR In Pay" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.SsrInPay" Title="SSR In Pay" Sortable="true" Filterable="true" HeaderStyle="width: 90px;" />,
+            
+            "Title Opinion" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.TitleOpinion" Title="Title Opinion" Sortable="true" Filterable="true" HeaderStyle="width: 130px;" />,
+            
+            "Liens" => @<TemplateColumn T="Acquisition" Title="Liens" Sortable="true" Filterable="true" HeaderStyle="width: 80px;">
+                <CellTemplate>
+                    @if (context.Item.Liens)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Warning" Size="Size.Small" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>,
+            
+            "Lien Amount" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.LienAmount" Title="Lien Amount" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 120px;" CellStyle="text-align: right;" />,
+            
+            "Tax Due" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TaxAmountDue" Title="Tax Due" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Tax Paid" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.TaxAmountPaid" Title="Tax Paid" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Invoice Number" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.InvoiceNumber" Title="Invoice #" Sortable="true" Filterable="true" HeaderStyle="width: 100px;" />,
+            
+            "Invoice Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.InvoiceDate" Title="Invoice Date" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Invoice Due Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.InvoiceDueDate" Title="Invoice Due" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Invoice Paid Date" => @<PropertyColumn T="Acquisition" TProperty="DateTime?" Property="x => x.InvoicePaidDate" Title="Invoice Paid" Sortable="true" Filterable="true" Format="MM/dd/yyyy" HeaderStyle="width: 120px;" />,
+            
+            "Invoice Total" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.InvoiceTotal" Title="Invoice Total" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 120px;" CellStyle="text-align: right;" />,
+            
+            "Commission" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.Commission" Title="Commission" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Comm %" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.CommissionPercent" Title="Comm %" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 80px;" CellStyle="text-align: right;" />,
+            
+            "Check Stub" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.HaveCheckStub" Title="Check Stub" Sortable="true" Filterable="true" HeaderStyle="width: 100px;" />,
+            
+            "Stub Desc" => @<PropertyColumn T="Acquisition" TProperty="string" Property="x => x.CheckStubDesc" Title="Stub Desc" Sortable="true" Filterable="true" HeaderStyle="width: 150px;" />,
+            
+            "Referral Fee" => @<PropertyColumn T="Acquisition" TProperty="decimal?" Property="x => x.ReferralFee" Title="Referral Fee" Sortable="true" Filterable="true" Format="N2" HeaderStyle="width: 110px;" CellStyle="text-align: right;" />,
+            
+            "Seller Name" => @<TemplateColumn T="Acquisition" Title="Seller Name" SortLabel="Seller Name" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.SellerName</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Last Name" => @<TemplateColumn T="Acquisition" Title="Seller Last Name" SortLabel="Seller Last Name" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.SellerLastName</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Address" => @<TemplateColumn T="Acquisition" Title="Seller Address 1" SortLabel="Seller Address" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine1</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Address 2" => @<TemplateColumn T="Acquisition" Title="Seller Address 2" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.AddressLine2</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller City" => @<TemplateColumn T="Acquisition" Title="Seller City" SortLabel="Seller City" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.City</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller State" => @<TemplateColumn T="Acquisition" Title="Seller State" SortLabel="Seller State" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.StateCode</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Zip Code" => @<TemplateColumn T="Acquisition" Title="Seller Zip" SortLabel="Seller Zip Code" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.ZipCode</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Phone" => @<TemplateColumn T="Acquisition" Title="Seller Phone" SortLabel="Seller Phone" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.ContactPhone</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Fax" => @<TemplateColumn T="Acquisition" Title="Seller Fax" SortLabel="Seller Fax" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.ContactFax</CellTemplate>
+            </TemplateColumn>,
+            
+            "Seller Email" => @<TemplateColumn T="Acquisition" Title="Seller Email" SortLabel="Seller Email" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@context.Item.AcquisitionSellers.FirstOrDefault()?.ContactEmail</CellTemplate>
+            </TemplateColumn>,
+            
+            "Operator Name" => @<TemplateColumn T="Acquisition" Title="Operator" SortLabel="Operator Name" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@string.Join(", ", context.Item.AcquisitionOperators.Select(x => x.Operator?.OperatorName).Where(x => !string.IsNullOrEmpty(x)))</CellTemplate>
+            </TemplateColumn>,
+            
+            "County Name" => @<TemplateColumn T="Acquisition" Title="County" SortLabel="County Name" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@string.Join(", ", context.Item.AcquisitionCounties.Select(x => x.County?.CountyName).Where(x => !string.IsNullOrEmpty(x)))</CellTemplate>
+            </TemplateColumn>,
+            
+            "Unit Name" => @<TemplateColumn T="Acquisition" Title="Unit Name" SortLabel="Unit Name" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitName).Where(x => !string.IsNullOrEmpty(x)))</CellTemplate>
+            </TemplateColumn>,
+            
+            "Unit Interest" => @<TemplateColumn T="Acquisition" Title="Unit Interest" SortLabel="Unit Interest" HeaderStyle="white-space:nowrap">
+                <CellTemplate>@string.Join(", ", context.Item.AcquisitionUnits.Select(x => x.UnitInterest).Where(x => x.HasValue))</CellTemplate>
+            </TemplateColumn>,
+
+            _ => null
+        };
+    }
+}
 

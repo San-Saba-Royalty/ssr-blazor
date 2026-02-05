@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using SSRBlazor.Models;
 using SSRBusiness.BusinessClasses;
 using SSRBusiness.Entities;
@@ -75,6 +76,33 @@ public class ViewService
     }
 
     /// <summary>
+    /// Save user's column ordering preference for a view
+    /// </summary>
+    public async Task<(bool Success, string? Error)> SaveUserColumnPreferenceAsync(int userId, string viewName, string module, List<string> columnOrder)
+    {
+        try
+        {
+            var jsonOrder = JsonSerializer.Serialize(columnOrder);
+            var pref = new UserViewPreference
+            {
+                UserID = userId,
+                ViewName = viewName,
+                TableName = module, // Using Module as TableName/Context
+                ColumnOrder = jsonOrder,
+                IsDefault = false
+            };
+
+            await _repository.SaveUserViewPreferenceAsync(pref);
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving column preference for user {UserId}, view {ViewName}", userId, viewName);
+            return (false, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Set the default view for a user (persisted in DB)
     /// </summary>
     public async Task<(bool Success, string? Error)> SetUserDefaultViewAsync(string userId, int viewId, string? pageName = null)
@@ -122,15 +150,33 @@ public class ViewService
     }
 
     /// <summary>
-    /// Get view configuration with all field selections
+    /// Get view configuration with all field selections, optionally applying user preferences
     /// </summary>
-    public async Task<ViewConfiguration?> GetViewConfigurationAsync(int viewId)
+    public async Task<ViewConfiguration?> GetViewConfigurationAsync(int viewId, int? userId = null)
     {
         var view = await _repository.GetByIdNoTrackingAsync(viewId);
         if (view == null) return null;
 
         var allFields = await _fieldRepository.GetDisplayFieldsAsync(view.Module);
         var selectedFields = await _repository.GetViewFieldsAsync(viewId);
+
+        // Check for user preference override
+        List<string>? userColumnOrder = null;
+        if (userId.HasValue)
+        {
+            var pref = await _repository.GetUserViewPreferenceAsync(userId.Value, view.ViewName ?? "", view.Module);
+            if (pref != null && !string.IsNullOrEmpty(pref.ColumnOrder))
+            {
+                try
+                {
+                    userColumnOrder = JsonSerializer.Deserialize<List<string>>(pref.ColumnOrder);
+                }
+                catch
+                {
+                    // Ignore empty or invalid JSON
+                }
+            }
+        }
 
         var config = new ViewConfiguration
         {
@@ -150,6 +196,35 @@ public class ViewService
                 };
             }).ToList()
         };
+
+        // If user has a preference, re-order and update selection status
+        if (userColumnOrder != null && userColumnOrder.Any())
+        {
+            // Create a dictionary for O(1) lookups of the user's order index
+            var orderMap = userColumnOrder
+                .Select((name, index) => new { Name = name, Index = index })
+                .ToDictionary(x => x.Name, x => x.Index);
+
+            // Update fields:
+            // 1. If it's in the user's list, it is Selected and has a specific order.
+            // 2. If it's NOT in the user's list, it is Not Selected (hidden), and we push it to the end.
+            foreach (var field in config.Fields)
+            {
+                if (orderMap.TryGetValue(field.FieldName, out var newIndex))
+                {
+                    field.IsSelected = true;
+                    field.DisplayOrder = newIndex + 1;
+                }
+                else
+                {
+                    field.IsSelected = false;
+                    field.DisplayOrder = 9999; // Move to end
+                }
+            }
+
+            // Sort by the new DisplayOrder
+            config.Fields = config.Fields.OrderBy(f => f.DisplayOrder).ToList();
+        }
 
         return config;
     }
